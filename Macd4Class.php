@@ -910,7 +910,11 @@ EOF;
 
         $pair = $lvars['pair']['name'];
         $conn = $cvars['conn'];
-        $str = "select * FRom " . $cvars['ar']['dataset'] . " where name = '" . $pair . "'";
+        
+        // limit to 'samples'
+        
+        $str = "SELECT * FROM (SELECT * FROM " . $cvars['ar']['dataset'] . " where name = '" . $pair . "' ORDER BY id DESC LIMIT " . $cvars['samples'] . ") sub ORDER BY id ASC";
+//        $str = "select * FRom " . $cvars['ar']['dataset'] . " where name = '" . $pair . "'";
 
         $st = $conn->prepare($str);
         $st->execute();
@@ -1531,7 +1535,7 @@ EOX;
 //***************************************************************************************************
     public function makeGraphs1(&$lvars, &$cvars, &$macdary) {
 
-//        unlink("./img/*");
+        unlink("./img/*");
         if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {
 //        if (1 == 0) {
         } else {

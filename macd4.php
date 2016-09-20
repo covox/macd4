@@ -1,5 +1,4 @@
 <?php
-
 set_time_limit(180);
 
 if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {
@@ -61,6 +60,7 @@ $cvars = array(
     , 'volPctLimit' => 1 //  10%
     , 'makerFee' => 0.9985 // 0.15% fee of bid orders
     , 'takerFee' => 0.9985 // e use the make free for all  and not the actual 0.25 fee on ask
+    , 'samples' =>  4320 // technically only need $fastPeriod numbner of records to make a decision, but we need more to see the hostory... 4320 = 3 days of data
     , 'ar' => array()
 );
 $totcashout = 0;
@@ -73,8 +73,6 @@ $dataset = "hist";
 if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
     
 } else {
-
-
     $cvars['ar']['fastPeriod'] = (isset($_GET['fastPeriod']) ? $_GET['fastPeriod'] : $cvars['ar']['fastPeriod']);
     $cvars['ar']['slowPeriod'] = (isset($_GET['slowPeriod']) ? $_GET['slowPeriod'] : $cvars['ar']['slowPeriod']);
     $cvars['ar']['signalPeriod'] = (isset($_GET['signalPeriod']) ? $_GET['signalPeriod'] : $cvars['ar']['signalPeriod']);
@@ -90,16 +88,9 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
 
     // these are only web options
     $cvars['ar']['expand'] = (isset($_GET['expand']) ? $_GET['expand'] : 0);
-
-
     $dataset = $cvars['ar']['dataset'];
-//
-//    var_dump($_GET);
-//    var_dump($cvars);
-
     $pairList = $m4->getMenuHtml(1000, $cvars, $_GET['pair']);
     $fList = $m4->getFlistHtml($cvars);
-
     $cvars['ar']['pairq'] = (isset($_GET['pair']) ? $_GET['pair'] : $cvars['ar']['pairq']);
     if ($_GET['func'] != "") {
         $_GET['pair'] = $_GET['func'];
@@ -178,80 +169,85 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
             </table>
             <input type="submit" name="submit">
         </form><br>
+    </body>
+    </html>
 
+    <?php
+}
 
+$up = $m4->getQstr($cvars['ar']['pairq'], $cvars);
+$allpairs = $m4->doQuery(($up ? $up : "select distinct name from ${dataset} where name like '" . $cvars['ar']['pairq'] . "'"), $cvars);
 
-        <script>
- 
-        </script>
+//******************************************************************************
+// ths is teh main loop that does everythihg
+//******************************************************************************
 
+//run through all pairs
+foreach ($allpairs as $lvars['pair']) {
+    $lvars = $m4->clearVars($lvars, $cvars);
 
-        <?php
+    // FIXME - this seem to be gettign called every 5 seconds.. sometimes
+    
+    // only need the last days activity
+    $tdata = $m4->getSampleSize($lvars, $cvars); //select all data from db and store in array.. everthign is derived from this
+    
+    
+    
+    if ($cvars['ar']['expand'] != 0) {
+        $tdata = array_slice($tdata, 0, $cvars['ar']['expand']);
+    }
+    $cvars['ar']['scale'] = 100; //defaultyfor cryupto
+    if ($cvars['ar']['dataset'] == "testdata1") { // we are using 'real' data, so don't scale it
+        $cvars['ar']['scale'] = 1;
     }
 
-    $up = $m4->getQstr($cvars['ar']['pairq'], $cvars);
-    $allpairs = $m4->doQuery(($up ? $up : "select distinct name from ${dataset} where name like '" . $cvars['ar']['pairq'] . "'"), $cvars);
-    //run through all pairs
-    foreach ($allpairs as $lvars['pair']) {
-        $lvars = $m4->clearVars($lvars, $cvars);
+    $lvars['lastDatax'] = $m4->skewData($lvars, $cvars, "last", "lowestAsk", "highestBid", $tdata, $scale = true);
 
-        // FIXME - this seem to be gettign called every 5 seconds.. sometimes
-        $tdata = $m4->getSampleSize($lvars, $cvars); //select all data from db and store in array.. everthign is derived from this
-        if ($cvars['ar']['expand'] != 0) {
-            $tdata = array_slice($tdata, 0, $cvars['ar']['expand']);
-        }
-        $cvars['ar']['scale'] = 100; //defaultyfor cryupto
-        if ($cvars['ar']['dataset'] == "testdata1") { // we are using 'real' data, so don't scale it
-            $cvars['ar']['scale'] = 1;
-        }
+    $macdary = trader_macd($lvars['lastDatax'], $cvars['ar']['fastPeriod'], $cvars['ar']['slowPeriod'], $cvars['ar']['signalPeriod']); //generate MACD and histograms
+    $arraydiff = count($tdata) - count($macdary[0]); // get fiss for realign
+    // get the actual 
+    $lvars['volume'] = $m4->get_data($lvars, $cvars, "baseVolume", $tdata);    // get volume recs
+    $lvars['lastDataBid'] = $m4->get_data($lvars, $cvars, "highestBid", $tdata);
+    $lvars['lastDataAsk'] = $m4->get_data($lvars, $cvars, "lowestAsk", $tdata);
+    $lvars['lastData'] = $m4->get_data($lvars, $cvars, "last", $tdata);
+    $lvars['times'] = $m4->get_data($lvars, $cvars, "time", $tdata);
 
-        $lvars['lastDatax'] = $m4->skewData($lvars, $cvars, "last", "lowestAsk", "highestBid", $tdata, $scale = true);
+    $lvars['macd'] = array_values($macdary[0]);
 
-        $macdary = trader_macd($lvars['lastDatax'], $cvars['ar']['fastPeriod'], $cvars['ar']['slowPeriod'], $cvars['ar']['signalPeriod']); //generate MACD and histograms
-        $arraydiff = count($tdata) - count($macdary[0]); // get fiss for realign
-        // get the actual 
-        $lvars['volume'] = $m4->get_data($lvars, $cvars, "baseVolume", $tdata);    // get volume recs
-        $lvars['lastDataBid'] = $m4->get_data($lvars, $cvars, "highestBid", $tdata);
-        $lvars['lastDataAsk'] = $m4->get_data($lvars, $cvars, "lowestAsk", $tdata);
-        $lvars['lastData'] = $m4->get_data($lvars, $cvars, "last", $tdata);
-        $lvars['times'] = $m4->get_data($lvars, $cvars, "time", $tdata);
+    $lvars['lastDatax'] = $m4->chopary($lvars['lastDatax'], $arraydiff);
+    $lvars['lastDataBid'] = $m4->chopary($lvars['lastDataBid'], $arraydiff);
+    $lvars['lastDataAsk'] = $m4->chopary($lvars['lastDataAsk'], $arraydiff);
+    $lvars['lastData'] = $m4->chopary($lvars['lastData'], $arraydiff);
+    $lvars['times'] = $m4->chopary($lvars['times'], $arraydiff);
+    $lvars['volume'] = $m4->chopary($lvars['volume'], $arraydiff);
 
-        $lvars['macd'] = array_values($macdary[0]);
+    $lvars['data'] = $m4->chopary($tdata, $arraydiff);
 
-        $lvars['lastDatax'] = $m4->chopary($lvars['lastDatax'], $arraydiff);
-        $lvars['lastDataBid'] = $m4->chopary($lvars['lastDataBid'], $arraydiff);
-        $lvars['lastDataAsk'] = $m4->chopary($lvars['lastDataAsk'], $arraydiff);
-        $lvars['lastData'] = $m4->chopary($lvars['lastData'], $arraydiff);
-        $lvars['times'] = $m4->chopary($lvars['times'], $arraydiff);
-        $lvars['volume'] = $m4->chopary($lvars['volume'], $arraydiff);
+    $m4->logIt("RUNNING -> ./macd4.php -f" . $cvars['ar']['fastPeriod'] . " -s" . $cvars['ar']['slowPeriod'] . " -S" . $cvars['ar']['signalPeriod'] . " -p" . ($lvars['pair']['name']) . " -m" . $cvars['ar']['mode'] . " -c" . $cvars['ar']['BTCinv'] . " -x" . $cvars['ar']['xsteps'] . " -U" . $cvars['ar']['minpctup'] * 100 . " -D" . $cvars['ar']['maxpctdn'] * 100 . " -z" . $cvars['ar']['dataset'] . "\n", $cvars);
+    $btc_value = $m4->getCurrentBTCval();
+    for ($lvars['k'] = 1; $lvars['k'] < count($lvars['macd']); $lvars['k'] ++) {
+        $lvars['buyPoints'][$lvars['k']] = 0;
+        $lvars['sellPoints'][$lvars['k']] = 0; //$lvars['macd'][$lvars['k']];;//0;
+        $lvars['buyPointsVal'][$lvars['k']] = 0;
+        $lvars['sellPointsVal'][$lvars['k']] = 0; //$lvars['macd'][$lvars['k']];;//0;
 
-        $lvars['data'] = $m4->chopary($tdata, $arraydiff);
-
-        $m4->logIt("RUNNING -> ./macd4.php -f" . $cvars['ar']['fastPeriod'] . " -s" . $cvars['ar']['slowPeriod'] . " -S" . $cvars['ar']['signalPeriod'] . " -p" . ($lvars['pair']['name']) . " -m" . $cvars['ar']['mode'] . " -c" . $cvars['ar']['BTCinv'] . " -x" . $cvars['ar']['xsteps'] . " -U" . $cvars['ar']['minpctup'] * 100 . " -D" . $cvars['ar']['maxpctdn'] * 100 . " -z" . $cvars['ar']['dataset'] . "\n", $cvars);
-        $btc_value = $m4->getCurrentBTCval();
-        for ($lvars['k'] = 1; $lvars['k'] < count($lvars['macd']); $lvars['k'] ++) {
-            $lvars['buyPoints'][$lvars['k']] = 0;
-            $lvars['sellPoints'][$lvars['k']] = 0; //$lvars['macd'][$lvars['k']];;//0;
-            $lvars['buyPointsVal'][$lvars['k']] = 0;
-            $lvars['sellPointsVal'][$lvars['k']] = 0; //$lvars['macd'][$lvars['k']];;//0;
-
-            switch ($cvars['ar']['method']) {
-                case 1:   // ????
-                    $lvars['action'] = $m4->setAction_v1($lvars, $cvars);
-                    $m4->processByLessSimpleHist_v1($lvars, $cvars);
-                    break;
-                case 2:  //this process analyses tickes on a minute by mninute bases
-                    $lvars['action'] = $m4->setAction_v2($lvars, $cvars);
-                    $m4->processByLessSimpleHist_v2($lvars, $cvars);
-                    break;
-                case 3:  //his process only looks at MACD crossopvers
-                    $lvars['action'] = $m4->setAction_v3($lvars, $cvars);
-                    $m4->processByLessSimpleHist_v3($lvars, $cvars);
-                    break;
-                case 4:   // 
-                    $lvars['action'] = $m4->setAction_v4($lvars, $cvars);
-                    $m4->processByLessSimpleHist_v4($lvars, $cvars);
-                    break;
+        switch ($cvars['ar']['method']) {
+            case 1:   // ????
+                $lvars['action'] = $m4->setAction_v1($lvars, $cvars);
+                $m4->processByLessSimpleHist_v1($lvars, $cvars);
+                break;
+            case 2:  //this process analyses tickes on a minute by mninute bases
+                $lvars['action'] = $m4->setAction_v2($lvars, $cvars);
+                $m4->processByLessSimpleHist_v2($lvars, $cvars);
+                break;
+            case 3:  //his process only looks at MACD crossopvers
+                $lvars['action'] = $m4->setAction_v3($lvars, $cvars);
+                $m4->processByLessSimpleHist_v3($lvars, $cvars);
+                break;
+            case 4:   // 
+                $lvars['action'] = $m4->setAction_v4($lvars, $cvars);
+                $m4->processByLessSimpleHist_v4($lvars, $cvars);
+                break;
 //                case 5:
 //                    $lvars['action'] = $m4->setAction_v5($lvars, $cvars);
 //                    $m4->processByLessSimpleHist_v5($lvars, $cvars);
@@ -260,39 +256,39 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
 //                    $lvars['action'] = $m4->setAction_v6($lvars, $cvars);
 //                    $m4->processByLessSimpleHist_v6($lvars, $cvars);
 //                    break;
-                default:
+            default:
 //                  code to be executed if n is different from all labels;
-            }
         }
-        // cash out remaining BTC
-        $m4->logIt("CASHING OUT AT LAST BUY PRICE: ", $cvars);
-
-        $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
-        $cashout = $lvars['BTC'] + $shval;
-        $lvars['sharesHolding'] = $lvars['shares'];
-
-        $annualUnits = $m4->getDaysDiff($lvars['times'][0], $lvars['times'][count($lvars['times']) - 1]);
-        $annualPct = ($cashout - $cvars['ar']['BTCinv']) * 100 * $annualUnits;
-
-        $rs = sprintf("> %12s %32.16f %5s bids %5s asks %5.2f%% (annual) \n", $lvars['pair']['name'], $cashout, $lvars['bids'], $lvars['asks'], sprintf("%8.2f", $annualPct));
-        print($rs);
-        if (PHP_SAPI != 'cli') {
-            print "<h2>";
-            print "<div style='background-color:grey;'>\n";
-            $m4->makeGraphs1($lvars, $cvars, $macdary);
-            $m4->makeGraphs2($lvars, $cvars, $macdary);
-            print "</h2>";
-            print "</div>\n";
-        }
-        $totcashout += $cashout;
-        $totc = count($allpairs);
-        $lvars['BTC'] = $cvars['ar']['BTCinv'];
     }
-    if ((isset($totc) && ($totc > 1))) {
+    // cash out remaining BTC
+    $m4->logIt("CASHING OUT AT LAST BUY PRICE: ", $cvars);
 
-        $annualInt = (($totcashout / $totc ) - 1) * 100 * 180; //(365/2)
-        $str = "=================================================================================\nAVG: $totcashout / $totc  (" . ($totcashout / $totc) . ")  Annual interest: " . $annualInt . " %\n=================================================================================\n";
-        print($str);
-        $m4->logIt($str, $cvars);
+    $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
+    $cashout = $lvars['BTC'] + $shval;
+    $lvars['sharesHolding'] = $lvars['shares'];
+
+    $annualUnits = $m4->getDaysDiff($lvars['times'][0], $lvars['times'][count($lvars['times']) - 1]);
+    $annualPct = ($cashout - $cvars['ar']['BTCinv']) * 100 * $annualUnits;
+
+    $rs = sprintf("> %12s %32.16f %5s bids %5s asks %5.2f%% (annual) \n", $lvars['pair']['name'], $cashout, $lvars['bids'], $lvars['asks'], sprintf("%8.2f", $annualPct));
+    print($rs);
+    if (PHP_SAPI != 'cli') {
+        print "<h2>";
+        print "<div style='background-color:grey;'>\n";
+        $m4->makeGraphs1($lvars, $cvars, $macdary);
+        $m4->makeGraphs2($lvars, $cvars, $macdary);
+        print "</h2>";
+        print "</div>\n";
     }
+    $totcashout += $cashout;
+    $totc = count($allpairs);
+    $lvars['BTC'] = $cvars['ar']['BTCinv'];
+}
+if ((isset($totc) && ($totc > 1))) {
+
+    $annualInt = (($totcashout / $totc ) - 1) * 100 * 180; //(365/2)
+    $str = "=================================================================================\nAVG: $totcashout / $totc  (" . ($totcashout / $totc) . ")  Annual interest: " . $annualInt . " %\n=================================================================================\n";
+    print($str);
+    $m4->logIt($str, $cvars);
+}
   

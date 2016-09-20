@@ -1528,5 +1528,324 @@ EOX;
 
         //return($ar);
     }
+//***************************************************************************************************
+    public function makeGraphs1(&$lvars, &$cvars, &$macdary) {
 
+//        unlink("./img/*");
+        if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {
+//        if (1 == 0) {
+        } else {
+            $w = count($lvars['lastData']) * 3;
+            if ($cvars['ar']['expand'] != 0) {
+                $w = 4068;
+            }
+            $h = 500;
+
+            $of[0] = "Rlast_" . $lvars['pair']['name'] . ".png"; // start with last_BTC_XMR.png
+            $of[1] = "Rbuypv_" . $lvars['pair']['name'] . ".png";
+            $of[2] = "Rsellpv_" . $lvars['pair']['name'] . ".png";
+//            $a = $this->normalize($lvars['buyPointsVal'], $miny, $maxy);
+//            $miny = min($lvars['sellPointsVal']);
+//            $maxy = max($lvars['buyPointsVal']);
+//            $miny = min($lvars['lastData']);
+//            $maxy = max($lvars['lastData']);
+//
+//            print "[$miny][$maxy]\n";
+//            var_export($lvars['lastData']);
+//            $miny -= $miny*4000;
+//            $maxy += $maxy*4000;
+///////////////////////////////////////////////////////////
+            $data = $lvars['lastData'];
+
+
+            foreach ($data as $i => $v) {
+                $data[$i] = $data[$i] * 1000000;
+            }
+            $min = min($data);
+            $max = max($data);
+            $avg = ($max - $min) / 2;
+            foreach ($data as $i => $v) {
+                $data[$i] = $data[$i] - $avg;
+            }
+
+            $miny = min($data);
+            $maxy = max($data);
+
+
+
+            $this->genPlot(array('pData' => $this->dataPrepLast($data), 'w' => $w, 'h' => $h, 'of' => $of[0], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "black", 'type' => "lines"));
+///////////////////////////////////////////////////////////
+            $data = $lvars['buyPointsVal'];
+
+            foreach ($data as $i => $v) {
+                $data[$i] = $data[$i] * 1000000 - $avg;
+            }
+            $this->genPlot(array('pData' => $this->dataPrepLast($data), 'w' => $w, 'h' => $h, 'of' => $of[1], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "blue", 'type' => "points"));
+///////////////////////////////////////////////////////////
+            $data = $lvars['sellPointsVal'];
+
+            foreach ($data as $i => $v) {
+                $data[$i] = $data[$i] * 1000000 - $avg;
+            }
+
+            $this->genPlot(array('pData' => $this->dataPrepLast($data), 'w' => $w, 'h' => $h, 'of' => $of[2], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "green", 'type' => "points"));
+
+
+
+
+
+
+
+//          $a = $this->normalize($lvars['buyPointsVal'], $miny, $maxy);
+//            $a = $lvars['buyPointsVal'];
+//            $pData = $this->dataPrepBuy($lvars['buyPointsVal']);
+//            genPlot(array('pData' => $pData, 'w' => $w, 'h' => $h, 'of' => $of[1], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "blue", 'type' => "points"));
+////
+//////   
+////   
+////   
+////   
+////   //   'point' sell line    
+////            if (isset($of[5])) {
+////                $a = $this->normalize($lvars['sellPointsVal'], $miny, $maxy);
+//                $pData = $this->dataPrepSell($lvars['sellPointsVal']);
+//                genPlot(array('pData' => $pData, 'w' => $w, 'h' => $h, 'of' => $of[2], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "green", 'type' => "points"));
+////            }
+//
+
+            $src = array();
+            $out = array();
+            $savedas = "";
+//////////////////
+            //for ($j = 0; $j < count($of)-1 ; $j++) {
+            $savedas = $this->genPlotMake($of);
+            //print "final =  [$savedas]\n";
+            //}
+
+            echo "<div style='width:${w}px;position:relative;padding:30px;background-color:#eeFFFF;border:6px solid black'><img id='./img/" . $savedas . "'src='./img/" . $savedas . "' /></div>";
+            //          echo "3<div style='position:relative;'><img src='combined.png' /></div>";
+        }
+    }
+
+//***************************************************************************************************
+//***************************************************************************************************
+//***************************************************************************************************
+//***************************************************************************************************
+    public function makeGraphs2(&$lvars, &$cvars, &$macdary) {
+        if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {
+//        if (1 == 0) {
+        } else {
+
+            //$w = count($lvars['lastData']) * 3;
+            $w = count($lvars['lastData']) * 3;
+            if ($cvars['ar']['expand'] != 0) {
+                $w = 4068;
+            }
+            $h = 500;
+            $miny = -1;
+            $maxy = 1;
+
+
+            $of[0] = "last_" . $lvars['pair']['name'] . ".png"; // start with last_BTC_XMR.png
+            $of[1] = "macd_" . $lvars['pair']['name'] . ".png"; // and add macd_BTC_XMR.png
+            $of[2] = "buyp_" . $lvars['pair']['name'] . ".png";
+            $of[3] = "sellp_" . $lvars['pair']['name'] . ".png";
+            //$of[4] = "buypv_" . $lvars['pair']['name'] . ".png";
+            //$of[5] = "sellpv_" . $lvars['pair']['name'] . ".png";
+            $miny = min($macdary[0]);
+            $maxy = max($macdary[0]);
+
+
+
+//  last    
+            if (isset($of[0])) {
+                $a = $this->normalize($lvars['lastData'], $miny, $maxy);
+                $pData = $this->dataPrepLast($a);
+                $this->genPlot(array('pData' => $pData, 'w' => $w, 'h' => $h, 'of' => $of[1], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "black", 'type' => "lines"));
+            }
+//  macd
+            if (isset($of[1])) {
+                $pData = $this->dataPrepMacd($macdary);
+                $this->genPlot(array('pData' => $pData, 'w' => $w, 'h' => $h, 'of' => $of[0], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => array('red', 'blue', 'green'), 'type' => "lines"));
+            }
+//  buy
+            if (isset($of[2])) {
+                $a = $lvars['buyPoints'];
+                $pData = $this->dataPrepBuy($a);
+                $this->genPlot(array('pData' => $pData, 'w' => $w, 'h' => $h, 'of' => $of[2], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "blue", 'type' => "points"));
+            }
+//   'point' sell line    
+            if (isset($of[3])) {
+                $a = $lvars['sellPoints'];
+                $pData = $this->dataPrepSell($a);
+                $this->genPlot(array('pData' => $pData, 'w' => $w, 'h' => $h, 'of' => $of[3], 'miny' => $miny, 'maxy' => $maxy, 'title' => "Signal", 'color' => "green", 'type' => "points"));
+//   'point' buy line    
+            }
+
+
+
+            $src = array();
+            $out = array();
+            $savedas = "";
+//////////////////
+            //for ($j = 0; $j < count($of)-1 ; $j++) {
+            $savedas = $this->genPlotMake($of);
+            //print "final =  [$savedas]\n";
+            //}
+
+            echo "<div style='width:${w}px;position:relative;padding:30px;background-color:#FFeeFF;border:6px solid black'><img id='./img/" . $savedas . "'src='./img/" . $savedas . "' /></div>";
+            //          echo "3<div style='position:relative;'><img src='combined.png' /></div>";
+        }
+    }
+
+      public function genPlot($args) {
+
+        $pData = $args['pData'];
+        $w = $args['w'];
+        $h = $args['h'];
+        $of = "./img/" . $args['of'];
+        $miny = $args['miny'];
+        $maxy = $args['maxy'];
+        $title = $args['title'];
+        $color = $args['color'];
+        $type = $args['type'];
+
+
+        $plot4 = new PHPlot($w, $h, $of);
+        $plot4->SetImageBorderType('plain');
+        $plot4->SetPlotType($type);
+        $plot4->SetDataType('data-data');
+        $plot4->SetTransparentColor(array(255, 255, 255));
+        $plot4->SetDataColors($color);
+        $plot4->SetDataValues($pData);
+        $plot4->SetLineStyles('solid');
+
+        if ($type == 'points') {
+            $plot4->SetPointSizes(15);
+        } else {
+            $plot4->SetLineWidths(2);
+        }
+# Main plot title:
+        $plot4->SetTitle($title);
+        $plot4->SetPlotAreaWorld(NULL, $miny, null, $maxy);
+        $plot4->SetPrintImage(true);
+        $plot4->SetFileFormat("png");
+        $plot4->SetIsInline(true);
+
+        $plot4->SetOutputFile($of);
+        $plot4->DrawGraph();
+        //print "writing to $of\n";
+//            print "outputting SELL data to ${of[3]}\n";
+//            echo "<div style='position:relative; z-index:10'><img src=' ${of[3]}' /></div>";
+//            exit;
+//            echo "<div style='position:relative; z-index:10;top:-600px'><img src='${of}' /></div>";
+// now combinethem
+    }
+
+    public function genPlotMake($of) {
+        $src = array();
+        for ($v = 0; $v < count($of) - 1; $v++) {
+//            $c = ($v>0?($v-1)."_":'');
+//            $out = $v . "_" . $of[$v];
+            $out = $v . ".png";
+            //print "combining " . $of[$v] . " + " . $of[$v + 1] . " > $out\n";
+            $src[$v] = new \Imagick("./img/" . $of[$v]);
+            $src[$v + 1] = new \Imagick("./img/" . $of[$v + 1]); //            print "combining: ${of[0]} + ${of[1]} -> ${out[$v]}\n";
+
+            $src[$v]->setImageVirtualPixelMethod(Imagick::VIRTUALPIXELMETHOD_TRANSPARENT);
+            $src[$v]->setImageArtifact('compose:args', "1,0,-0.5,0.5");
+            $src[$v]->compositeImage($src[$v + 1], Imagick::COMPOSITE_MATHEMATICS, 0, 0);
+            //rint "Combined output to ./img/".$out."\n";
+            $of[$v + 1] = $out;
+            $src[$v]->writeImage("./img/" . $out);
+        }
+
+        $uout = uniqid() . $out;
+        rename("./img/" . $out, "./img/" . $uout);
+
+        return($uout);
+    }
+    
+    public     function normalize($data, $new_min = 0, $new_max = 0) {
+        $min = min($data);
+        $max = max($data);
+        if ($min + $max != 0) {
+            foreach ($data as $i => $v) {
+                $data[$i] = ((($new_max - $new_min) * ($v - $min)) / ($max - $min)) + $new_min;
+            }
+        }
+
+        return($data);
+    }
+
+    public function normalizeX($data, $new_min = 0, $new_max = 0) {
+        $min = min($data);
+        $max = max($data);
+        if ($min + $max != 0) {
+            foreach ($data as $i => $v) {
+                $data[$i] = (((($new_max - $new_min) * ($v - $min)) / ($max - $min)) + $new_min) * 100000;
+            }
+        }
+
+        return($data);
+    }
+
+    public function dataPrepMacd($macdary) {
+        $pData = array();
+
+        $macd1 = array_values($macdary[0]);
+        $macd2 = array_values($macdary[1]);
+        $macd3 = array_values($macdary[2]);
+
+        for ($q = 0; $q < count($macd1); $q++) {
+            $x = array(''
+                , $q
+                , $macd1[$q]
+                , $macd2[$q]
+                , $macd3[$q]
+            );
+            array_push($pData, $x);
+        }
+        return( $pData );
+    }
+
+    public function dataPrepLast($a) {
+        $pData = array();
+        foreach ($a as $q => $v) {
+            $x = array(''
+                , $q
+                , $v
+            );
+            array_push($pData, $x);
+        }
+        return($pData);
+    }
+
+    public function dataPrepBuy($a) {
+        $pData = array();
+        foreach ($a as $q => $v) {
+            $x = array(''
+                , $q
+                , $v
+            );
+            array_push($pData, $x);
+        }
+        return($pData);
+    }
+
+    public function dataPrepSell($a) {
+        $pData = array();
+        foreach ($a as $q => $v) {
+//        for ($q = 0; $q < count($a); $q++) {
+            $x = array(''
+                , $q
+                , $v
+            );
+            array_push($pData, $x);
+        }
+        return($pData);
+    }
+
+
+    
 }

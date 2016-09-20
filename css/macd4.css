@@ -1,0 +1,28 @@
+img { display:block; }
+#dis {
+    text-decoration:line-through;
+    color:gray;
+    display:none;
+}
+li {
+    font-size:small;
+}
+.b0,.b1,.b2,.b3  {
+    border: none;
+    color: white;
+    padding: 5px 5px;
+    font-size:8pt !important;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor:pointer;
+}
+.b0 { background-color: white;color:black} /* Green */
+.b1 { background-color: #4CAF50;} /* Green */
+.b2 { background-color:blue}
+.b3 { background-color:darkred}
+#show {
+    font-size:x-large;
+    color:darkred;
+}

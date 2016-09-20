@@ -1,4 +1,6 @@
 <?php
+
+/* test version */
 set_time_limit(180);
 
 if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {

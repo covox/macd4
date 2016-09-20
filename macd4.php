@@ -7,6 +7,7 @@ if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {
     print "<pre>";
 }
 // test
+// // test 2
 //$whichProcess = 4; // minute by minute
 require_once('poloniex.php');
 require_once 'phplot/phplot.php';

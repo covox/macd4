@@ -31,7 +31,7 @@ class Macd4Class {
             } else {
                 $on = "";
             }
-            $str .= "<option  ${on} id='".$op['name']."' value='" . $op['name'] . "'>${op['name']} (" . $this->nf($op['av'], 0) . ")</option>\n";
+            $str .= "<option  ${on} id='" . $op['name'] . "' value='" . $op['name'] . "'>${op['name']} (" . $this->nf($op['av'], 0) . ")</option>\n";
         }
         $str .= "</select>\n";
         return($str);
@@ -232,6 +232,22 @@ class Macd4Class {
     // **************************************************************************
     // **************************************************************************
     public function _newShareVal(&$lvars, &$cvars) {
+
+
+
+        //this is where we are live
+
+
+        if ($lvars['k'] == count($lvars['macd']) - 1) {
+            $cvars['action'] == "live";
+            print $this->r("BUY (s" . $lvars['askcredit'] . "/b".$lvars['askcredit'].")\n");
+        } else {
+            $cvars['action'] == "test";
+//            print "ORDER NOT PLACED";
+        }
+
+
+
         //$pps = $lvars['lastData'][$lvars['k']];  // uses LAST value
         $pps = $lvars['lastDataBid'][$lvars['k']];   // uses LOWESTASK
         $shCanBuy = $lvars['volume'][$lvars['k']] * $cvars['volPctLimit'];
@@ -245,6 +261,9 @@ class Macd4Class {
         $btcChange = $lvars['BTC'] - $amtBTCcost;
         $newShAmt = $amtToBuy * $cvars['makerFee'];
 
+        $lvars['bidcredit'] --; // update counters
+        $lvars['askcredit'] ++;
+
         $lvars['buyPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
         $lvars['buyPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
 //        print $this->y($newShAmt);
@@ -257,6 +276,14 @@ class Macd4Class {
     // **************************************************************************
     public function _newBTCval(&$lvars, &$cvars) {
 
+        if ($lvars['k'] == count($lvars['macd']) - 1) {
+            $cvars['action'] == "live";
+            print $this->g("SELL  (s" . $lvars['askcredit'] . "/b".$lvars['askcredit'].")\n");
+        } else {
+            $cvars['action'] == "test";
+//            print "ORDER NOT PLACED";
+        }
+
         //$pps = $lvars['lastData'][$lvars['k']]; // uses LAST value
         $pps = $lvars['lastDataAsk'][$lvars['k']]; // uses HIGHESTBID
         $shares = $lvars['shares'];
@@ -266,6 +293,10 @@ class Macd4Class {
         $amtToRecover = ($shares * $pps);
         $btcBal = $lvars['BTC'] + ($amtToRecover * $cvars['takerFee']);
         $shareBal = 0;
+
+        $lvars['askcredit'] --;
+        $lvars['bidcredit'] ++;
+
         $lvars['sellPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
         $lvars['sellPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
 
@@ -458,6 +489,9 @@ class Macd4Class {
     }
 
     public function sumbmitBidRequest(&$lvars, &$cvars) {
+
+
+
         $bidtx = $this->_newShareVal($lvars, $cvars);
         $lvars['shares'] = $bidtx['shares'];
         $lvars['BTC'] = $bidtx['BTCchange'];
@@ -500,8 +534,9 @@ class Macd4Class {
                 $this->logIt($r, $cvars);
                 //update state
                 $lvars['lastbidbtc'] = $lvars['BTC']; // record for comparison
-                $lvars['bidcredit'] --; // update counters
-                $lvars['askcredit'] ++;
+                // moved to newShaceVal, newBTCVal
+//                $lvars['bidcredit'] --; // update counters
+//                $lvars['askcredit'] ++;
                 $lvars['bids'] ++;
                 $lvars['action'] = ".";
             }
@@ -545,8 +580,8 @@ class Macd4Class {
                     //$r = $this->_getStatStr($lvars);
 
                     $this->logIt($r, $cvars);
-                    $lvars['askcredit'] --;
-                    $lvars['bidcredit'] ++;
+//                    $lvars['askcredit'] --;
+//                    $lvars['bidcredit'] ++;
 //                    $lvars['BTC'] = $lvars['BTC'] * $cvars['takerFee']; // comission
                     $lvars['shares'] = 0;
                     $lvars['asks'] ++;
@@ -565,6 +600,38 @@ class Macd4Class {
         if (($currentMacd < 0) && ($previousMacd > 0)) {
             return("bid");
         } elseif ((($currentMacd > 0) && ($previousMacd < 0))) {
+            return("ask");
+        }
+        return("-");
+    }
+
+    // **************************************************************************
+    public function setAction_v4a(&$lvars, &$cvars) {
+        $currentMacd = $lvars['macd'][$lvars['k']];
+        $previousMacd = $lvars['macd'][$lvars['k'] - 1];
+
+        // if macd is + and previous is - then the lines have crossed
+        if (($currentMacd < 0) && ($previousMacd > 0)) {
+            $lvars['dnticks'] ++;
+
+//            print "dnticks = " . $lvars['dnticks'] . "\n";
+            if ($lvars['dnticks'] == $cvars['ar']['dnticks']) {
+                $lvars['dnticks'] = 0; // reset
+                return("bid");
+            }
+        } elseif ((($currentMacd > 0) && ($previousMacd < 0))) {
+
+            $lvars['upticks'] ++;
+
+ //           print "upticks = " . $lvars['upticks'] . "\n";
+            if ($lvars['upticks'] == $cvars['ar']['upticks']) {
+                $lvars['upticks'] = 0; // reset
+                return("bid");
+            }
+
+
+
+
             return("ask");
         }
         return("-");
@@ -872,7 +939,7 @@ EOF;
     }
 
 // *****************************************************************************
-    public function get_dbconn() {
+    public function get_dbconn($which = "local") {
         /*
 
           the database that sores the histpoircal data looks like this
@@ -897,12 +964,22 @@ EOF;
           poloniex and stores into this table
          */
 
-        $dsi = "mysql:host=localhost;dbname=polo;charset=utf8mb4";
-        $dbuser = "root";
-        $dbpass = "";
-        $conn = new PDO($dsi, $dbuser, $dbpass);
-        $conn->exec("SET CHARACTER SET utf8");
-        return($conn);
+
+        if ($which == "histremote") {
+            $dsi = "mysql:host=108.161.131.78;dbname=polo;charset=utf8mb4";
+            $dbuser = "expDBuser";
+            $dbpass = "hddjw734ndfh";
+            $conn = new PDO($dsi, $dbuser, $dbpass);
+            $conn->exec("SET CHARACTER SET utf8");
+            return($conn);
+        } else {
+            $dsi = "mysql:host=localhost;dbname=polo;charset=utf8mb4";
+            $dbuser = "root";
+            $dbpass = "";
+            $conn = new PDO($dsi, $dbuser, $dbpass);
+            $conn->exec("SET CHARACTER SET utf8");
+            return($conn);
+        }
     }
 
 // *****************************************************************************
@@ -910,9 +987,9 @@ EOF;
 
         $pair = $lvars['pair']['name'];
         $conn = $cvars['conn'];
-        
+
         // limit to 'samples'
-        
+
         $str = "SELECT * FROM (SELECT * FROM " . $cvars['ar']['dataset'] . " where name = '" . $pair . "' ORDER BY id DESC LIMIT " . $cvars['samples'] . ") sub ORDER BY id ASC";
 //        $str = "select * FRom " . $cvars['ar']['dataset'] . " where name = '" . $pair . "'";
 
@@ -1354,7 +1431,7 @@ EOX;
     }
 
 // *****************************************************************************
-    public function getQstr($pair,$cvars) {
+    public function getQstr($pair, $cvars) {
         $str = 0;
         if ($pair == "f_delta") {
             print "[f_delta] TOP 10 BASED ON SMALLEST HI/LO DELTA, BASE VOLUME AND PERCENT INCREASE\n";
@@ -1439,7 +1516,7 @@ EOX;
     }
 
     public function getARopts(&$cvars) {
-        $xr = $this->getoptreq('f:s:S:p:m:c:x:U:D:X:z:d:h', array('fastperiod:', 'slowperiod:', 'signalperiod:', 'pairq:', 'mode:', 'btcinv:', 'xsteps:', 'minpctup:', 'maxpctdn:', 'method:', 'data:', 'debug:', 'help'));
+        $xr = $this->getoptreq('f:s:S:p:m:c:x:U:D:X:z:a:b:d:h', array('fastperiod:', 'slowperiod:', 'signalperiod:', 'pairq:', 'mode:', 'btcinv:', 'xsteps:', 'minpctup:', 'maxpctdn:', 'method:', 'data:', 'minupticks:','mindnticks:','debug:', 'help'));
 
         $cvars['ar']['debug'] = 0;
         foreach (array_keys($xr) as $opt)
@@ -1507,6 +1584,14 @@ EOX;
                     }
                     break;
 
+                case 'a':
+                    $cvars['ar']['upticks'] = $xr['a'];
+                    break;
+
+                case 'b':
+                    $cvars['ar']['dnticks'] = $xr['b'];
+                    break;
+
                 case 'd':
                     $cvars['ar']['debug'] = 1;
                     break;
@@ -1528,14 +1613,18 @@ EOX;
         $cvars['ar']['maxpctdn'] = (isset($cvars['ar']['maxpctdn']) ? $cvars['ar']['maxpctdn'] : .06);
         $cvars['ar']['dataset'] = (isset($cvars['ar']['dataset']) ? $cvars['ar']['dataset'] : 'hist');
         $cvars['ar']['method'] = (isset($cvars['ar']['method']) ? $cvars['ar']['method'] : 4);
+        $cvars['ar']['upticks'] = (isset($cvars['ar']['upticks']) ? $cvars['ar']['upticks'] : 3);
+        $cvars['ar']['dnticks'] = (isset($cvars['ar']['dnticks']) ? $cvars['ar']['dnticks'] : 2);
         $cvars['ar']['debug'] = (isset($cvars['ar']['debug']) ? $cvars['ar']['debug'] : 7);
 
         //return($ar);
     }
+
 //***************************************************************************************************
     public function makeGraphs1(&$lvars, &$cvars, &$macdary) {
 
-        unlink("./img/*");
+        system("rm /home/jw/src/macd4/img/*");
+
         if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {
 //        if (1 == 0) {
         } else {
@@ -1702,7 +1791,7 @@ EOX;
         }
     }
 
-      public function genPlot($args) {
+    public function genPlot($args) {
 
         $pData = $args['pData'];
         $w = $args['w'];
@@ -1769,8 +1858,8 @@ EOX;
 
         return($uout);
     }
-    
-    public     function normalize($data, $new_min = 0, $new_max = 0) {
+
+    public function normalize($data, $new_min = 0, $new_max = 0) {
         $min = min($data);
         $max = max($data);
         if ($min + $max != 0) {
@@ -1850,6 +1939,4 @@ EOX;
         return($pData);
     }
 
-
-    
 }

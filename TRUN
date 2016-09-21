@@ -1,0 +1,6 @@
+
+# DOGE has a lot of trx, good for testing
+php ./macd4.php -f23 -s14 -S9 -pBTC_DOGE -c1 -x1 -U1.25 -D6 -mt -z1 -a0 -b0
+
+# XCP has high vol and hi return, good fro live
+#php ./macd4.php -f23 -s14 -S9 -pBTC_XCP -c1 -x1 -U1.25 -D6 -mt -z1 -a4 -b1

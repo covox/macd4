@@ -1,0 +1,8 @@
+#!/usr/sbin/bash
+inotifywait -q -m /home/jw/src/macd4/trans -e modify |
+    while read path action file;     do
+#        echo "The file '$file' appeared in directory '$path' via '$action'"
+        ./TRUN
+    done
+	
+	

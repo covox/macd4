@@ -116,8 +116,9 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
     $cvars['ar']['method'] = (isset($_GET['method']) ? $_GET['method'] : $cvars['ar']['method']);
     $cvars['ar']['debug'] = (isset($_GET['debug'][0]) && ($_GET['debug'][0] == 1) ? 1 : 0);
     $cvars['ar']['pair'] = (isset($_GET['pair']) ? $_GET['pair'] : "BCT_XRP");
-    $cvars['ar']['upticks'] = (isset($_GET['upticks']) ? $_GET['upticks'] : 3);
-    $cvars['ar']['dnticks'] = (isset($_GET['dnticks']) ? $_GET['dnticks'] : "2");
+    $cvars['ar']['upticks'] = (isset($_GET['upticks']) ? $_GET['upticks'] : 4);
+    $cvars['ar']['dnticks'] = (isset($_GET['dnticks']) ? $_GET['dnticks'] : 1);
+    $cvars['ar']['frompoint'] = (isset($_GET['frompoint']) ? $_GET['frompoint'] : 1);
 
 
 
@@ -276,6 +277,8 @@ foreach ($allpairs as $lvars['pair']) {
         $lvars['sellPoints'][$lvars['k']] = 0; //$lvars['macd'][$lvars['k']];;//0;
         $lvars['buyPointsVal'][$lvars['k']] = 0;
         $lvars['sellPointsVal'][$lvars['k']] = 0; //$lvars['macd'][$lvars['k']];;//0;
+//print $m4->g("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ") - ");
+
 
         switch ($cvars['ar']['method']) {
             case 1:   // ????
@@ -312,19 +315,26 @@ foreach ($allpairs as $lvars['pair']) {
     // end of transactions loop
     //*************************************************************************
     // cash out remaining BTC
+    
+    $cashout = $lvars['BTC'];
     if ($cvars['ar']['mode'] == "t") {
-        $m4->logIt("CASHING OUT AT LAST BUY PRICE: ", $cvars);
+        if ($lvars['bidcredit']==0) {
 
+            $lvars['bidcredit']++;
+            $lvars['askcredit']--;
+            $m4->logIt("CASHING OUT AT LAST BUY PRICE: ", $cvars);
+            print $m4->g("CASHING OUT\n");
         $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
         // use the cumm totals for testing, and the last price for live
         
         $cashout = $lvars['BTC'] + $shval;
-        if ($cvars['ar']['mode'] == "l") {
+        if ($cvars['ar']['mode'] == "l") { // FIXME why is this here?
             $cashout = $lvars['lastUsedAskPrice'];
         }
 
         $lvars['sharesHolding'] = $lvars['shares'];
-
+        }
+        
         $annualUnits = $m4->getDaysDiff($lvars['times'][0], $lvars['times'][count($lvars['times']) - 1]);
         $annualPct = ($cashout - $cvars['ar']['BTCinv']) * 100 * $annualUnits;
         $date = date('m/d/Y h:i:s a', time());

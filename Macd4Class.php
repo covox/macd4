@@ -232,78 +232,74 @@ class Macd4Class {
     // **************************************************************************
     // **************************************************************************
     public function _newShareVal(&$lvars, &$cvars) {
-
-
-
         //this is where we are live
-
-
-        if ($lvars['k'] == count($lvars['macd']) - 1) {
+        if ($lvars['k'] >= count($lvars['macd']) - 1) {
             $cvars['action'] == "live";
-            print $this->r("BUY (s" . $lvars['askcredit'] . "/b".$lvars['askcredit'].")\n");
+            print $this->r("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
+            //$pps = $lvars['lastData'][$lvars['k']];  // uses LAST value
+            $pps = $lvars['lastDataBid'][$lvars['k']];   // uses LOWESTASK
+            $shCanBuy = $lvars['volume'][$lvars['k']] * $cvars['volPctLimit'];
+            $shCanAfford = $lvars['BTC'] / $pps;
+
+            $amtToBuy = ($shCanAfford > $shCanBuy ? $shCanBuy : $shCanAfford);
+            //$amtToBuy = $shCanAfford;
+
+            $amtBTCcost = ($amtToBuy * $pps);
+
+            $btcChange = $lvars['BTC'] - $amtBTCcost;
+            $newShAmt = $amtToBuy * $cvars['makerFee'];
+
+            $lvars['bidcredit'] --; // update counters
+            $lvars['askcredit'] ++;
+
+//            print $this->g("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
+            $lvars['buyPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
+            $lvars['buyPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
+//        print $this->y($newShAmt);
+//        print $this->g($btcChange);
+            $sary = array('shares' => $newShAmt, 'BTCchange' => $btcChange);
+            //print_r($sary);
+            return($sary);
         } else {
             $cvars['action'] == "test";
 //            print "ORDER NOT PLACED";
+            return(null);
         }
-
-
-
-        //$pps = $lvars['lastData'][$lvars['k']];  // uses LAST value
-        $pps = $lvars['lastDataBid'][$lvars['k']];   // uses LOWESTASK
-        $shCanBuy = $lvars['volume'][$lvars['k']] * $cvars['volPctLimit'];
-        $shCanAfford = $lvars['BTC'] / $pps;
-
-        $amtToBuy = ($shCanAfford > $shCanBuy ? $shCanBuy : $shCanAfford);
-        //$amtToBuy = $shCanAfford;
-
-        $amtBTCcost = ($amtToBuy * $pps);
-
-        $btcChange = $lvars['BTC'] - $amtBTCcost;
-        $newShAmt = $amtToBuy * $cvars['makerFee'];
-
-        $lvars['bidcredit'] --; // update counters
-        $lvars['askcredit'] ++;
-
-        $lvars['buyPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
-        $lvars['buyPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
-//        print $this->y($newShAmt);
-//        print $this->g($btcChange);
-        $sary = array('shares' => $newShAmt, 'BTCchange' => $btcChange);
-        //print_r($sary);
-        return($sary);
     }
 
     // **************************************************************************
     public function _newBTCval(&$lvars, &$cvars) {
 
-        if ($lvars['k'] == count($lvars['macd']) - 1) {
+        if ($lvars['k'] >= count($lvars['macd']) - 1) {
             $cvars['action'] == "live";
-            print $this->g("SELL  (s" . $lvars['askcredit'] . "/b".$lvars['askcredit'].")\n");
+            //print $this->g("SELL  (s" . $lvars['askcredit'] . "/b" . $lvars['bidcredit'] . ")\n");
+
+
+            //$pps = $lvars['lastData'][$lvars['k']]; // uses LAST value
+            $pps = $lvars['lastDataAsk'][$lvars['k']]; // uses HIGHESTBID
+            $shares = $lvars['shares'];
+
+            //print $this->g("you are selling ${shares} at ${pps}\n");
+
+            $amtToRecover = ($shares * $pps);
+            $btcBal = $lvars['BTC'] + ($amtToRecover * $cvars['takerFee']);
+            $shareBal = 0;
+
+            $lvars['askcredit'] --;
+            $lvars['bidcredit'] ++;
+
+            $lvars['sellPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
+            $lvars['sellPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
+
+
+            $sary = array('shares' => $shareBal, 'BTCbal' => $btcBal);
+            //print_r($sary);
+            return($sary);
         } else {
             $cvars['action'] == "test";
 //            print "ORDER NOT PLACED";
+            return(null);
         }
-
-        //$pps = $lvars['lastData'][$lvars['k']]; // uses LAST value
-        $pps = $lvars['lastDataAsk'][$lvars['k']]; // uses HIGHESTBID
-        $shares = $lvars['shares'];
-
-        //print $this->g("you are selling ${shares} at ${pps}\n");
-
-        $amtToRecover = ($shares * $pps);
-        $btcBal = $lvars['BTC'] + ($amtToRecover * $cvars['takerFee']);
-        $shareBal = 0;
-
-        $lvars['askcredit'] --;
-        $lvars['bidcredit'] ++;
-
-        $lvars['sellPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
-        $lvars['sellPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
-
-
-        $sary = array('shares' => $shareBal, 'BTCbal' => $btcBal);
-        //print_r($sary);
-        return($sary);
     }
 
     // **************************************************************************
@@ -472,32 +468,32 @@ class Macd4Class {
         return("-");
     }
 
+    //*************************************************************************
     public function sumbmitBidRequest_LIVE(&$lvars, &$cvars) {
         $bidtx = $this->_newShareVal_LIVE($lvars, $cvars);
-        $lvars['shares'] = $bidtx['shares'];
-        $lvars['BTC'] = $bidtx['BTCchange'];
+        if ($bidtx) {
+            $lvars['shares'] = $bidtx['shares'];
+            $lvars['BTC'] = $bidtx['BTCchange'];
 
-
-        $cbaly = $p->get_complete_balances();
-        $pair = "BTC";
-        print_r($cbaly[$pair]['available']);
-
-
-
-
+            $cbaly = $p->get_complete_balances();
+            $pair = "BTC";
+            print_r($cbaly[$pair]['available']);
+        }
         return true;
     }
 
+    //*************************************************************************
     public function sumbmitBidRequest(&$lvars, &$cvars) {
-
-
-
         $bidtx = $this->_newShareVal($lvars, $cvars);
-        $lvars['shares'] = $bidtx['shares'];
-        $lvars['BTC'] = $bidtx['BTCchange'];
+        if ($bidtx) {
+            $lvars['shares'] = $bidtx['shares'];
+            $lvars['BTC'] = $bidtx['BTCchange'];
+        }
+
         return true;
     }
 
+    //*************************************************************************
     public function sumbmitAskRequest(&$lvars, &$cvars) {
         $asktx = $this->_newBtcVal($lvars, $cvars);
         $lvars['BTC'] = $asktx['BTCbal'];
@@ -513,6 +509,7 @@ class Macd4Class {
         // original one that works
         if ($lvars['action'] == "bid") {
             // there must be a 'credit' to bid as there can only be N asks for N bids... for now.  starts with a bid do bidcredit is initialized as 1
+//print "[b".$lvars['bidcredit']."/a".$lvars['askcredit']."]";
             if ($lvars['bidcredit'] > 0) {
                 // only bid of teh decrease in price has dropped a certain percentage.. but cover the commissions as well
                 //$_percent = $this->_getPercentDelta($lvars, $cvars);
@@ -539,6 +536,7 @@ class Macd4Class {
 //                $lvars['askcredit'] ++;
                 $lvars['bids'] ++;
                 $lvars['action'] = ".";
+
             }
         }
         if ($lvars['action'] == "ask") {
@@ -615,7 +613,7 @@ class Macd4Class {
             $lvars['dnticks'] ++;
 
 //            print "dnticks = " . $lvars['dnticks'] . "\n";
-            if ($lvars['dnticks'] == $cvars['ar']['dnticks']) {
+            if ($lvars['dnticks'] >= $cvars['ar']['dnticks']) {
                 $lvars['dnticks'] = 0; // reset
                 return("bid");
             }
@@ -623,16 +621,11 @@ class Macd4Class {
 
             $lvars['upticks'] ++;
 
- //           print "upticks = " . $lvars['upticks'] . "\n";
-            if ($lvars['upticks'] == $cvars['ar']['upticks']) {
+            //           print "upticks = " . $lvars['upticks'] . "\n";
+            if ($lvars['upticks'] >= $cvars['ar']['upticks']) {
                 $lvars['upticks'] = 0; // reset
-                return("bid");
+                return("ask");
             }
-
-
-
-
-            return("ask");
         }
         return("-");
     }
@@ -867,10 +860,10 @@ class Macd4Class {
         //    $this->logIt("using: macd4.php -f" . $arglist['fastPeriod'] . " -s" . $arglist['slowPeriod'] . " -S" . $arglist['signalPeriod'] . " -p" . $arglist['pair'] . " -m" . $arglist['mode'] . " -c" . $arglist['BTCinv'] . " " . (isset($arglist['debug']) ? " -d" : '') . (isset($arglist['debug']) ? " -h" : '') . "\n", $cvars);
         $str = <<<EOF
                     
-               macd4.php -f[fastPeriod] -s[slowPeriodl] -S[signalPeriod] -p[pairname] -m[mode] -c[BTC investment] -x[xsteps] -d(ebug) -h(elp)
+               macd4.php -f[fastPeriod] -s[slowPeriodl] -S[signalPeriod] -p[pairname] -m[mode] -c[BTC investment] -x[xsteps] -a[minupticks] -b[mindnticks] -F[frompoint] -d(ebug) -h(elp)
 
                Ex: (using default values)
-                    ./trigger2.php -f26 -s12 -S4 -pBTC_AMP -mt -c1.0 -x7 [-d] [-h] 
+                    ./trigger2.php -f26 -s12 -S4 -pBTC_AMP -mt -c1.0 -x7 -a4 -b1 -F1 [-d] [-h] 
 
                         In 'test' mode modelook for 1 minute changes on BTC_AMP and look for 
                         triggers based on the MACD, and use 1.0 BTC as your purchasing amount 
@@ -919,8 +912,8 @@ class Macd4Class {
                    -z | --dataset
                         use a different dataset
                 
-                        1 = original polo data
-                        2 = current polo data
+                        1 = local polo data
+                        2 = remote polo data
                 
                         (the following are for web only)
                 
@@ -928,7 +921,11 @@ class Macd4Class {
                         4 = testdata1 (FNGN, ADP)
                         5 = testdata2 (Sin/Cos/tan curves, brownian, fractal))
                         6 = testdata3 (temps from 1890 - present)
-
+                    
+                    -a | --minupticks
+                    -b | --mindnticks
+                    -F | --frompoint
+                
                    -d | --debug 
                         1 = basic output
                         
@@ -990,7 +987,7 @@ EOF;
 
         // limit to 'samples'
 
-        $str = "SELECT * FROM (SELECT * FROM " . $cvars['ar']['dataset'] . " where name = '" . $pair . "' ORDER BY id DESC LIMIT " . $cvars['samples'] . ") sub ORDER BY id ASC";
+        $str = "SELECT * FROM (SELECT * FROM " . $cvars['ar']['dataset'] . " where name = '" . $pair . "' ORDER BY id DESC LIMIT " . $cvars['ar']['frompoint'] . "," . $cvars['samples'] . ") sub ORDER BY id ASC";
 //        $str = "select * FRom " . $cvars['ar']['dataset'] . " where name = '" . $pair . "'";
 
         $st = $conn->prepare($str);
@@ -1516,7 +1513,7 @@ EOX;
     }
 
     public function getARopts(&$cvars) {
-        $xr = $this->getoptreq('f:s:S:p:m:c:x:U:D:X:z:a:b:d:h', array('fastperiod:', 'slowperiod:', 'signalperiod:', 'pairq:', 'mode:', 'btcinv:', 'xsteps:', 'minpctup:', 'maxpctdn:', 'method:', 'data:', 'minupticks:','mindnticks:','debug:', 'help'));
+        $xr = $this->getoptreq('f:s:S:p:m:c:x:U:D:X:z:a:b:F:d:h', array('fastperiod:', 'slowperiod:', 'signalperiod:', 'pairq:', 'mode:', 'btcinv:', 'xsteps:', 'minpctup:', 'maxpctdn:', 'method:', 'data:', 'minupticks:', 'mindnticks:', 'frompoint' . 'debug:', 'help'));
 
         $cvars['ar']['debug'] = 0;
         foreach (array_keys($xr) as $opt)
@@ -1592,6 +1589,10 @@ EOX;
                     $cvars['ar']['dnticks'] = $xr['b'];
                     break;
 
+                case 'F':
+                    $cvars['ar']['frompoint'] = $xr['F'];
+                    break;
+
                 case 'd':
                     $cvars['ar']['debug'] = 1;
                     break;
@@ -1615,6 +1616,7 @@ EOX;
         $cvars['ar']['method'] = (isset($cvars['ar']['method']) ? $cvars['ar']['method'] : 4);
         $cvars['ar']['upticks'] = (isset($cvars['ar']['upticks']) ? $cvars['ar']['upticks'] : 3);
         $cvars['ar']['dnticks'] = (isset($cvars['ar']['dnticks']) ? $cvars['ar']['dnticks'] : 2);
+        $cvars['ar']['frompoint'] = (isset($cvars['ar']['frompoint']) ? $cvars['ar']['frompoint'] : 1);
         $cvars['ar']['debug'] = (isset($cvars['ar']['debug']) ? $cvars['ar']['debug'] : 7);
 
         //return($ar);

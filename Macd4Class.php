@@ -233,37 +233,62 @@ class Macd4Class {
     // **************************************************************************
     public function _newShareVal(&$lvars, &$cvars) {
         //this is where we are live
-        if ($lvars['k'] >= count($lvars['macd']) - 1) {
-            $cvars['action'] == "live";
-            print $this->r("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
-            //$pps = $lvars['lastData'][$lvars['k']];  // uses LAST value
-            $pps = $lvars['lastDataBid'][$lvars['k']];   // uses LOWESTASK
-            $shCanBuy = $lvars['volume'][$lvars['k']] * $cvars['volPctLimit'];
-            $shCanAfford = $lvars['BTC'] / $pps;
+        //if this is the LAST calc then is it the one current when in live mode, so we set teh status to live
+        //print $lvars['k']." >= ".(count($lvars['macd']))."\n";
+        if ($lvars['k'] + $cvars['ar']['frompoint'] >= (count($lvars['macd'])) - 1) {
+            $cvars['action'] = "live";
+        } else {
+            $cvars['action'] = "test"; // anything otehr ten teh last is for testing only
+        }
 
-            $amtToBuy = ($shCanAfford > $shCanBuy ? $shCanBuy : $shCanAfford);
-            //$amtToBuy = $shCanAfford;
+        //$pps = $lvars['lastData'][$lvars['k']];  // uses LAST value
+        $pps = $lvars['lastDataBid'][$lvars['k']];   // uses LOWESTASK
+        $shCanBuy = $lvars['volume'][$lvars['k']] * $cvars['volPctLimit'];
+        $shCanAfford = $lvars['BTC'] / $pps;
 
-            $amtBTCcost = ($amtToBuy * $pps);
+        $amtToBuy = ($shCanAfford > $shCanBuy ? $shCanBuy : $shCanAfford);
+        //$amtToBuy = $shCanAfford;
 
-            $btcChange = $lvars['BTC'] - $amtBTCcost;
-            $newShAmt = $amtToBuy * $cvars['makerFee'];
+        $amtBTCcost = ($amtToBuy * $pps);
 
+
+        $this->recspec($lvars['pctok']);
+        $this->recspec("BOUGHT");
+
+        $btcChange = $lvars['BTC'] - $amtBTCcost;
+        $newShAmt = $amtToBuy * $cvars['makerFee'];
+
+
+        if ($cvars['action'] == "live") { // if live (i.e. last recod) do this 
+            if ($cvars['ar']['mode'] == "l") {
+                //print $this->g("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
+                print $this->r(sprintf("PLACED BOUGHT ORDER: [%4s] shares: %15s @ %15s =  %15s BTC\n", $lvars['k'], $amtToBuy, $pps, $amtBTCcost)); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
+                $lvars['bidcredit'] --; // update counters
+                $lvars['askcredit'] ++;
+                file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
+
+
+                //JWFIX thse need to be overwritten by teh API calls
+                $btcChange = $lvars['BTC'] - $amtBTCcost;
+                $newShAmt = $amtToBuy * $cvars['makerFee'];
+                $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
+
+                file_put_contents(".btcshares", json_encode($sary));
+
+                $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
+//var_export($sary);
+                return($sary);
+            }
+        }
+        if ($cvars['ar']['mode'] == "t") { // otehrsise, if test do this
             $lvars['bidcredit'] --; // update counters
             $lvars['askcredit'] ++;
-
-//            print $this->g("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
+            $lvars['bidcredit'] --; // update counters
+            $lvars['askcredit'] ++;
             $lvars['buyPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
             $lvars['buyPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
-//        print $this->y($newShAmt);
-//        print $this->g($btcChange);
-            $sary = array('shares' => $newShAmt, 'BTCchange' => $btcChange);
-            //print_r($sary);
+            $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
             return($sary);
-        } else {
-            $cvars['action'] == "test";
-//            print "ORDER NOT PLACED";
-            return(null);
         }
     }
 
@@ -271,34 +296,46 @@ class Macd4Class {
     public function _newBTCval(&$lvars, &$cvars) {
 
         if ($lvars['k'] >= count($lvars['macd']) - 1) {
-            $cvars['action'] == "live";
-            //print $this->g("SELL  (s" . $lvars['askcredit'] . "/b" . $lvars['bidcredit'] . ")\n");
+            $cvars['action'] = "live";
+        } else {
+            $cvars['action'] = "test";
+        }
 
+        $pps = $lvars['lastDataAsk'][$lvars['k']]; // uses HIGHESTBID
+        $shares = $lvars['shares'];
 
-            //$pps = $lvars['lastData'][$lvars['k']]; // uses LAST value
-            $pps = $lvars['lastDataAsk'][$lvars['k']]; // uses HIGHESTBID
-            $shares = $lvars['shares'];
+        $this->recspec("SOLD");
 
-            //print $this->g("you are selling ${shares} at ${pps}\n");
+        $amtToRecover = ($shares * $pps);
+                $btcBal = $lvars['BTC'] + ($amtToRecover * $cvars['takerFee']);
+                $shareBal = 0;
 
-            $amtToRecover = ($shares * $pps);
-            $btcBal = $lvars['BTC'] + ($amtToRecover * $cvars['takerFee']);
-            $shareBal = 0;
+        if ($cvars['action'] == "live") {
+            if ($cvars['ar']['mode'] == "l") {
+                print $this->g(sprintf("PLACED SOLD   ORDER: [%4s] shares: %15s @ %15s =  %15s BTC\n", $lvars['k'], $shares, $pps, $amtToRecover)); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
+                $lvars['askcredit'] --;
+                $lvars['bidcredit'] ++;
+                file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
+                // JWFX need to be overridde,
+                //echo ("320-btcBAL:" . $lvars['BTC'] . " + $amtToRecover * " . $cvars['takerFee'] . "\n");
+
+                $sary = array('shares' => $shareBal, 'BTC' => $btcBal);
+                file_put_contents(".btcshares", json_encode($sary));
+//var_export($sary);
+
+                return($sary);
+            }
+        }
+
+        if ($cvars['ar']['mode'] == "t") {
 
             $lvars['askcredit'] --;
             $lvars['bidcredit'] ++;
-
             $lvars['sellPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
             $lvars['sellPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
 
-
-            $sary = array('shares' => $shareBal, 'BTCbal' => $btcBal);
-            //print_r($sary);
+            $sary = array('shares' => $shareBal, 'BTC' => $btcBal);
             return($sary);
-        } else {
-            $cvars['action'] == "test";
-//            print "ORDER NOT PLACED";
-            return(null);
         }
     }
 
@@ -333,6 +370,20 @@ class Macd4Class {
         $lvars['totcurrs'] = 0;
         $lvars['k'] = 0;
         $lvars['dir'] = "";
+
+        // if live mode we need to remember the last state
+
+        if ($cvars['ar']['mode'] == "l") {
+            $loadCredits = json_decode(file_get_contents(".credits"), TRUE);
+            $lvars['askcredit'] = $loadCredits['askcredit'];
+            $lvars['bidcredit'] = $loadCredits['bidcredit'];
+
+            $loadBtcShares = json_decode(file_get_contents(".btcshares"), TRUE);
+            $lvars['BTC'] = $loadBtcShares['BTC'];
+            $lvars['shares'] = $loadBtcShares['shares'];
+        }
+
+
         return($lvars);
     }
 
@@ -348,7 +399,9 @@ class Macd4Class {
                 //$lvars['lastUsedBidPrice'] = $lvars['lastData'][$lvars['k']]; uses LAST
                 $lvars['lastUsedBidPrice'] = $lvars['lastDataBid'][$lvars['k']]; // uses HIGHESTBID
                 // get curent BTC value to calc $$ amount
+                //echo "401-shares before:" . $lvars['shares'] . "\n";
                 $lvars['shares'] = $this->_newShareVal($lvars, $cvars);
+                //echo "403-shares sfter:" . $lvars['shares'] . "\n";
                 $r = $this->_getStatStr($lvars);
                 $this->logIt($r, $cvars);
                 //update state
@@ -473,7 +526,10 @@ class Macd4Class {
         $bidtx = $this->_newShareVal_LIVE($lvars, $cvars);
         if ($bidtx) {
             $lvars['shares'] = $bidtx['shares'];
-            $lvars['BTC'] = $bidtx['BTCchange'];
+            $lvars['BTC'] = $bidtx['BTC'];
+
+//            echo "531-BID REQ:";
+//            var_export($bidtx);
 
             $cbaly = $p->get_complete_balances();
             $pair = "BTC";
@@ -487,18 +543,25 @@ class Macd4Class {
         $bidtx = $this->_newShareVal($lvars, $cvars);
         if ($bidtx) {
             $lvars['shares'] = $bidtx['shares'];
-            $lvars['BTC'] = $bidtx['BTCchange'];
+            $lvars['BTC'] = $bidtx['BTC'];
+//            echo "547-BID REQ:";
+//            var_export($bidtx);
+            return true;
         }
-
-        return true;
+        return(false);
     }
 
     //*************************************************************************
     public function sumbmitAskRequest(&$lvars, &$cvars) {
         $asktx = $this->_newBtcVal($lvars, $cvars);
-        $lvars['BTC'] = $asktx['BTCbal'];
-        $lvars['shares'] = $asktx['shares'];
-        return true;
+        if ($asktx) {
+//            echo "\nASK REQ:";
+//            var_export($asktx);
+            $lvars['BTC'] = $asktx['BTC'];
+            $lvars['shares'] = $asktx['shares'];
+            return true;
+        }
+        return(false);
     }
 
     // **************************************************************************
@@ -507,86 +570,84 @@ class Macd4Class {
 
     public function processByLessSimpleHist_v4(&$lvars, &$cvars) {
         // original one that works
+
+        $proposedAskPrice = $lvars['lastDataAsk'][$lvars['k']];
+        $sellAt = $proposedAskPrice;
+        $boughtAt = $lvars['lastDataBid'][$lvars['k']];
+        $thispct = $this->ratioIncrease($boughtAt, $sellAt);
+        $lvars['pctok'] = (( ($thispct - $cvars['ar']['minpctup']) > 0) ? "passed" : "failed");
+
+
+
         if ($lvars['action'] == "bid") {
+            $lvars['pctok'] = "N/A";
             // there must be a 'credit' to bid as there can only be N asks for N bids... for now.  starts with a bid do bidcredit is initialized as 1
-//print "[b".$lvars['bidcredit']."/a".$lvars['askcredit']."]";
             if ($lvars['bidcredit'] > 0) {
                 // only bid of teh decrease in price has dropped a certain percentage.. but cover the commissions as well
-                //$_percent = $this->_getPercentDelta($lvars, $cvars);
                 $lvars['timesig'] = $this->_getTime($lvars);
-                //$lvars['lastUsedBidPrice'] = $lvars['lastData'][$lvars['k']]; uses LAST
                 $lvars['lastUsedBidPrice'] = $lvars['lastDataBid'][$lvars['k']]; // uses HIGHESTBID
+                file_put_contents(".lastUsedBidPrice", json_encode(array('lastUsedBidPrice' => $lvars['lastUsedBidPrice'])));
                 // get curent BTC value to calc $$ amount
-
                 $rs = $this->sumbmitBidRequest($lvars, $cvars);
                 if (!$rs) {
-                    print("ERROR IN BID SUBMISSION");
-                    exit;
+//                    print("ERROR IN BID SUBMISSION");
+//                    exit;
                 }
-
-//                print $this->b("you now have ${lvars['shares']} shares and ${lvars['BTC']} remaining\n");
-
+                //FIXME here is where we check for bottm level?
                 $r = $this->_getStatStr($lvars);
 
                 $this->logIt($r, $cvars);
                 //update state
                 $lvars['lastbidbtc'] = $lvars['BTC']; // record for comparison
-                // moved to newShaceVal, newBTCVal
-//                $lvars['bidcredit'] --; // update counters
-//                $lvars['askcredit'] ++;
                 $lvars['bids'] ++;
                 $lvars['action'] = ".";
-
             }
         }
         if ($lvars['action'] == "ask") {
             if ($lvars['askcredit'] > 0) {
                 $lvars['timesig'] = $this->_getTime($lvars);
                 $lvars['proposedAskPrice'] = $lvars['lastDataAsk'][$lvars['k']];
-
-
-
-//                $r = "====>>>>  " . $lvars['proposedAskPrice'] . " * " . $cvars['takerFee'] . " (" . $lvars['proposedAskPrice'] * $cvars['takerFee'] . ")  > " . $lvars['lastUsedBidPrice'] . "\n";
-//                if ($lvars['proposedAskPrice'] * $cvars['takerFee'] > $lvars['lastUsedBidPrice']) {
-//                    print $this->g($r);
-//                } else {
-//                    print $this->r($r);
-//                }
-
-
                 $sellAt = $lvars['proposedAskPrice'];
+
+                if (!$lvars['lastUsedBidPrice']) {
+                    $load = json_decode(file_get_contents(".lastUsedBidPrice"), TRUE);
+                    $lvars['lastUsedBidPrice'] = $load['lastUsedBidPrice'];
+                }
                 $boughtAt = $lvars['lastUsedBidPrice'];
-
-
                 $thispct = $this->ratioIncrease($boughtAt, $sellAt);
-//                print ("=======>>>>>> [".$minpct."]\n");
 
+                $this->recspec((( ($thispct - $cvars['ar']['minpctup']) > 0) ? "passed" : "failed"));
+//                $this->recspec($lovars['pctok'] );
 
                 if ($thispct > $cvars['ar']['minpctup']) {
-//                if ($lvars['proposedAskPrice'] * $cvars['takerFee'] > $lvars['lastUsedBidPrice']) {
-                    //print "selling\n";
-                    //$lvars['lastUsedAskPrice'] = $lvars['lastData'][$lvars['k']]; //uses LAST
                     $lvars['lastUsedAskPrice'] = $lvars['lastDataAsk'][$lvars['k']]; // uses LOWESTASK
-                    //$lvars['BTC'] = $this->_newBtcVal($lvars, $cvars);
-
                     $r = $this->_getStatStr($lvars);
                     $rs = $this->sumbmitAskRequest($lvars, $cvars);
                     if (!$rs) {
-                        print("ERROR IN ASK SUBMISSION");
-                        exit;
+//                        print("ERROR IN ASK SUBMISSION");
+//                        exit;
                     }
-                    //$r = $this->_getStatStr($lvars);
-
                     $this->logIt($r, $cvars);
-//                    $lvars['askcredit'] --;
-//                    $lvars['bidcredit'] ++;
-//                    $lvars['BTC'] = $lvars['BTC'] * $cvars['takerFee']; // comission
-                    $lvars['shares'] = 0;
+//                    $lvars['shares'] = 0;
                     $lvars['asks'] ++;
                     $lvars['action'] = ".";
                 }
             }
         }
+    }
+
+    // **************************************************************************
+
+    public function setAction_v3(&$lvars) {
+        $currentMacd = $lvars['macd'][$lvars['k']];
+        $previousMacd = $lvars['macd'][$lvars['k'] - 1];
+
+        if (($currentMacd > 0) && ($previousMacd < 0)) {
+            return("bid");
+        } elseif (($currentMacd < 0) && ($previousMacd > 0)) {
+            return("ask");
+        }
+        return("-");
     }
 
     // **************************************************************************
@@ -603,31 +664,41 @@ class Macd4Class {
         return("-");
     }
 
+    public function recspec($spec = null) {
+
+        $s = sprintf("%20s", $spec);
+        file_put_contents("specs.log", "${s}", FILE_APPEND);
+    }
+
     // **************************************************************************
     public function setAction_v4a(&$lvars, &$cvars) {
         $currentMacd = $lvars['macd'][$lvars['k']];
         $previousMacd = $lvars['macd'][$lvars['k'] - 1];
-
+        $stat = "-";
         // if macd is + and previous is - then the lines have crossed
         if (($currentMacd < 0) && ($previousMacd > 0)) {
+            $lvars['direction'] = "sinking";
             $lvars['dnticks'] ++;
-
-//            print "dnticks = " . $lvars['dnticks'] . "\n";
             if ($lvars['dnticks'] >= $cvars['ar']['dnticks']) {
                 $lvars['dnticks'] = 0; // reset
-                return("bid");
+                $stat = "bid";
             }
         } elseif ((($currentMacd > 0) && ($previousMacd < 0))) {
-
+            $lvars['direction'] = "rising";
             $lvars['upticks'] ++;
-
-            //           print "upticks = " . $lvars['upticks'] . "\n";
             if ($lvars['upticks'] >= $cvars['ar']['upticks']) {
                 $lvars['upticks'] = 0; // reset
-                return("ask");
+                $stat = "ask";
             }
+        } else {
+            $lvars['direction'] = "-";
         }
-        return("-");
+        $this->recspec($lvars['direction']);
+        $this->recspec($lvars['dnticks']);
+        $this->recspec($lvars['upticks']);
+
+
+        return($stat);
     }
 
     // **************************************************************************
@@ -714,20 +785,6 @@ class Macd4Class {
                 }
             }
         }
-    }
-
-    // **************************************************************************
-
-    public function setAction_v3(&$lvars) {
-        $macdAfter = $lvars['macd'][$lvars['k']];
-        $macdBefore = $lvars['macd'][$lvars['k'] - 1];
-
-        if (($macdAfter > 0) && ($macdBefore < 0)) {
-            return("bid");
-        } elseif (($macdAfter < 0) && ($macdBefore > 0)) {
-            return("ask");
-        }
-        return("-");
     }
 
     // **************************************************************************
@@ -1717,7 +1774,7 @@ EOX;
             //print "final =  [$savedas]\n";
             //}
 
-            echo "<div style='width:${w}px;position:relative;padding:30px;background-color:#eeFFFF;border:6px solid black'><img id='./img/" . $savedas . "'src='./img/" . $savedas . "' /></div>";
+            print "<div style='width:${w}px;position:relative;padding:30px;background-color:#eeFFFF;border:6px solid black'><img id='./img/" . $savedas . "'src='./img/" . $savedas . "' /></div>";
             //          echo "3<div style='position:relative;'><img src='combined.png' /></div>";
         }
     }
@@ -1788,8 +1845,8 @@ EOX;
             //print "final =  [$savedas]\n";
             //}
 
-            echo "<div style='width:${w}px;position:relative;padding:30px;background-color:#FFeeFF;border:6px solid black'><img id='./img/" . $savedas . "'src='./img/" . $savedas . "' /></div>";
-            //          echo "3<div style='position:relative;'><img src='combined.png' /></div>";
+            print "<div style='width:${w}px;position:relative;padding:30px;background-color:#FFeeFF;border:6px solid black'><img id='./img/" . $savedas . "'src='./img/" . $savedas . "' /></div>";
+            //          print "3<div style='position:relative;'><img src='combined.png' /></div>";
         }
     }
 
@@ -1831,9 +1888,9 @@ EOX;
         $plot4->DrawGraph();
         //print "writing to $of\n";
 //            print "outputting SELL data to ${of[3]}\n";
-//            echo "<div style='position:relative; z-index:10'><img src=' ${of[3]}' /></div>";
+//            print "<div style='position:relative; z-index:10'><img src=' ${of[3]}' /></div>";
 //            exit;
-//            echo "<div style='position:relative; z-index:10;top:-600px'><img src='${of}' /></div>";
+//            print "<div style='position:relative; z-index:10;top:-600px'><img src='${of}' /></div>";
 // now combinethem
     }
 

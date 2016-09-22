@@ -26,4 +26,4 @@ $st = $conn->prepare($str);
 $st->execute();
 $lastID = $st->fetch();
 //    $newid = mysql_insert_id();
-file_put_contents("/home/jw/src/macd4/trans/_lastID", $lastID[0] . "\n");
+file_put_contents("/home/jw/src/macd4/trans/_lastID", $lastID[0] );

@@ -1,9 +1,4 @@
 <?php
-
-
-
-
-
 /*
  *  run ./MON to start
  * 
@@ -82,10 +77,18 @@ $lvars = array(
     , 'trxnum' => ""
     , 'upticks' => 0
     , 'dnticks' => 0
+    , 'direction' => "-"
 );
 
+// load credit from file svaed from last transations
+
+
+
+
+
 $cvars = array(
-      'conn' => NULL
+    'conn' => NULL
+    , 'lastid' => file_get_contents("trans/_lastID")
     , 'priceScaleFactor' => 10000000
     , 'volPctLimit' => 1 //  10%
     , 'action' => 'test'
@@ -102,7 +105,6 @@ $dataset = $cvars['ar']['dataset'];
 
 if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
     $cvars['conn'] = $m4->get_dbconn($dataset); // or "remote"
-    
 } else {
     $cvars['ar']['fastPeriod'] = (isset($_GET['fastPeriod']) ? $_GET['fastPeriod'] : $cvars['ar']['fastPeriod']);
     $cvars['ar']['slowPeriod'] = (isset($_GET['slowPeriod']) ? $_GET['slowPeriod'] : $cvars['ar']['slowPeriod']);
@@ -146,11 +148,6 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
         <link rel="stylesheet" type="text/css" href="css/macd4.css">
     </head>
     <body style="background-color:cornsilk">
-        <ul>
-            <li> Backtests against 770622 records polled every minute from Friday Sept 9 at 7:03 PM to Sunday Sept 5 11 at 5:13 PM
-            <li> Shares purchased are limited to the volume at the time of the purchase
-            <li> Transactions are adjusted with the 0.25% Taker Fee (even though Mker Fee is only 0.15)
-        </ul>        
         <div id="show"></div>
         <table border="0px">
             <tr>
@@ -208,7 +205,7 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
                         <input   class="datasel"        type="radio"  id="ds5" name="data" value="testdata2" <?php print ($cvars['ar']['dataset'] == 'testdata2' ? 'checked' : ''); ?>     /> [z5] test data (set 2: Sin/Cos/tan curves, brownian, fractal)<br />
                         <input   class="datasel"        type="radio"  id="ds6" name="data" value="testdata3" <?php print ($cvars['ar']['dataset'] == 'testdata3' ? 'checked' : ''); ?>     /> [z6] test data (set 3: temp from 1890)<br />
                     </td></tr>
-                <tr><td>expand data view:</td><td><input    id="expand"         type="text" name="expand" value="<?php echo $cvars['ar']['expand']; ?>"     /> (dataset in same size window)<br /></td></tr>
+                <tr><td>expand data view:</td><td><input    id="expand"         type="text" name="expand" value="<?php echo $cvars['ar']['expand']; ?>"     /> (dataset in same size window, 4310 for 1:1)<br /></td></tr>
             </table>
             <input type="submit" name="submit">
         </form><br>
@@ -230,7 +227,7 @@ foreach ($allpairs as $lvars['pair']) {
 
     // FIXME - this seem to be gettign called every 5 seconds.. sometimes
     // only need the last days activity
-
+//print ":".$lvars['bidcredit'];
     $tdata = $m4->getSampleSize($lvars, $cvars); //select all data from db and store in array.. everthign is derived from this
 
     if (isset($cvars['ar']['expand']) && ($cvars['ar']['expand']) != 0) {
@@ -272,7 +269,28 @@ foreach ($allpairs as $lvars['pair']) {
     //*************************************************************************
     // loops through transactions
     //*************************************************************************
+    $m4->recspec("\n------------------------------------------------------------\n");
+    $m4->recspec("id");
+    $m4->recspec("macd");
+    $m4->recspec("last");
+    $m4->recspec("bidcredit");
+    $m4->recspec("askcredit");
+    $m4->recspec("direction");
+    $m4->recspec("dnticks");
+    $m4->recspec("upticks");
+    $m4->recspec("action");
+    $m4->recspec("percent");
+    $m4->recspec("\n------------------------------------------------------------\n");
+
     for ($lvars['k'] = 1; $lvars['k'] < count($lvars['macd']); $lvars['k'] ++) {
+
+        $m4->recspec($lvars['k']);
+        $m4->recspec($lvars['macd'][$lvars['k']]);
+        $m4->recspec($lvars['lastData'][$lvars['k']]);
+        $m4->recspec($lvars['bidcredit']);
+        $m4->recspec($lvars['askcredit']);
+
+
         $lvars['buyPoints'][$lvars['k']] = 0;
         $lvars['sellPoints'][$lvars['k']] = 0; //$lvars['macd'][$lvars['k']];;//0;
         $lvars['buyPointsVal'][$lvars['k']] = 0;
@@ -295,6 +313,7 @@ foreach ($allpairs as $lvars['pair']) {
                 break;
             case 4:   // 
                 $lvars['action'] = $m4->setAction_v4a($lvars, $cvars);
+                $m4->recspec($lvars['action']);
                 //print $lvars['k']. " - ". count($lvars['macd'])."  = [".$lvars['action']."]\n";
                 $m4->processByLessSimpleHist_v4($lvars, $cvars);
                 break;
@@ -309,37 +328,44 @@ foreach ($allpairs as $lvars['pair']) {
             default:
 //                  code to be executed if n is different from all labels;
         }
+        $m4->recspec("\n");
     }
 
     //*************************************************************************
     // end of transactions loop
     //*************************************************************************
     // cash out remaining BTC
-    
-    $cashout = $lvars['BTC'];
-    if ($cvars['ar']['mode'] == "t") {
-        if ($lvars['bidcredit']==0) {
 
-            $lvars['bidcredit']++;
-            $lvars['askcredit']--;
+    $cashout = $lvars['BTC'];  // if not in test mode, record the btc
+//    echo $lvars['BTC'].":";
+//    echo $lvars['shares'];
+    $date = date('m/d/Y h:i:s a', time());
+    if ($cvars['ar']['mode'] == "l") {  // all this stuff is only valid when in test mode
+        $rs = sprintf("> [%6s] %12s %6d %32.16f  %32.16f %s  \n",$cvars['lastid'], $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $lvars['BTC'], $lvars['shares'], $date);
+//        print($rs);
+        $m4->logIt($rs, $cvars, 1);
+    }
+
+//shares    print "---".$cashout."\n";
+
+    if ($cvars['ar']['mode'] == "t") {  // all this stuff is only valid when in test mode
+        if ($lvars['bidcredit'] == 0) {
+
+            $lvars['bidcredit'] ++;
+            $lvars['askcredit'] --;
             $m4->logIt("CASHING OUT AT LAST BUY PRICE: ", $cvars);
             print $m4->g("CASHING OUT\n");
-        $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
-        // use the cumm totals for testing, and the last price for live
-        
-        $cashout = $lvars['BTC'] + $shval;
-        if ($cvars['ar']['mode'] == "l") { // FIXME why is this here?
-            $cashout = $lvars['lastUsedAskPrice'];
+            $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
+            // use the cumm totals for testing, and the last price for live
+
+            $lvars['sharesHolding'] = $lvars['shares'];
         }
 
-        $lvars['sharesHolding'] = $lvars['shares'];
-        }
-        
         $annualUnits = $m4->getDaysDiff($lvars['times'][0], $lvars['times'][count($lvars['times']) - 1]);
         $annualPct = ($cashout - $cvars['ar']['BTCinv']) * 100 * $annualUnits;
         $date = date('m/d/Y h:i:s a', time());
         //print "action = [".$lvars['action']."]\n";
-        $rs = sprintf("> %12s %6d %32.16f %5s bids %5s asks %5.2f%% (annual) %s  \n", $lvars['pair']['name'], $lvars['volume'][$lvars['k']-1],$cashout, $lvars['bids'], $lvars['asks'], sprintf("%8.2f", $annualPct),$date);
+        $rs = sprintf("> %12s %6d %32.16f %5s bids %5s asks %5.2f%% (annual) %s  \n", $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $cashout, $lvars['bids'], $lvars['asks'], sprintf("%8.2f", $annualPct), $date);
         print($rs);
         if (PHP_SAPI != 'cli') {
             print "<h2>";

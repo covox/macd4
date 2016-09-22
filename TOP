@@ -1,0 +1,3 @@
+#php ./macd4.php -f23 -s14 -S9 -pBTC_% -c1 -x1 -U1.25 -D6 -mt -z1 -a4 -b1 > tmp/list
+grep "bids" tmp/list  > tmp/flist
+cat tmp/flist | awk '{print $3" - "$2" - "$9}'|sort -n|tail -10

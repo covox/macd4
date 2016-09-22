@@ -1,0 +1,21 @@
+#!/usr/sbin/php
+<?php
+
+
+$c = array(
+        'bidcredit'=>1,
+        'askcredit'=>0);
+
+$s = array(
+        'BTC'=>1,
+        'shares'=>0);
+
+
+file_put_contents(".credits", json_encode($c));
+file_put_contents(".btcshares", json_encode($s));
+
+print "------------------\n";
+var_export($c);
+print "------------------\n";
+var_export($s);
+print "------------------\n";

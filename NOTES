@@ -1,0 +1,5 @@
+
+#got 2312% on XMR
+
+./macd4.php -f23 -s14 -S9 -pBTC_XMR -mt -c1 -x1 -U0 -D6 -zhist-a4 -b0
+

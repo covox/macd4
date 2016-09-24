@@ -796,7 +796,7 @@ class Macd4ClassTest {
 
 // *****************************************************************************
 
-    public function showhelp() {
+    public function showhelp() { 
         //    $this->logIt("using: macd4.php -f" . $arglist['fastPeriod'] . " -s" . $arglist['slowPeriod'] . " -S" . $arglist['signalPeriod'] . " -p" . $arglist['pair'] . " -m"  . " -c" . $arglist['BTCinv'] . " " . (isset($arglist['debug']) ? " -d" : '') . (isset($arglist['debug']) ? " -h" : '') . "\n", $cvars);
         $str = <<<EOF
                     

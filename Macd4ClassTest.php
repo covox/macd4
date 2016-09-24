@@ -11,7 +11,7 @@
  *
  * @author jw
  */
-class Macd4Class {
+class Macd4ClassTest {
 
     function getMenuHtml($list, $cvars, $selected) {
 
@@ -233,6 +233,7 @@ class Macd4Class {
     // **************************************************************************
     // **************************************************************************
     public function _newShareVal(&$lvars, &$cvars) {
+
         //this is where we are live
         //if this is the LAST calc then is it the one current when in live mode, so we set teh status to live
         //print $lvars['k']." >= ".(count($lvars['macd']))."\n";
@@ -259,37 +260,36 @@ class Macd4Class {
         $btcChange = $lvars['BTC'] - $amtBTCcost;
         $newShAmt = $amtToBuy * $cvars['makerFee'];
 
-echo "action = ".$cvars['action'];
 
         if ($cvars['action'] == "live") { // if live (i.e. last recod) do this 
-            if ($cvars['ar']['mode'] == "l") {
-                //print $this->g("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
-                print $this->r(sprintf("[%8s] PLACED BOUGHT ORDER: [%4s] shares: %15s @ %15s =  %15s BTC (%20s)\n", $lvars['pair']['name'], $lvars['k'], $amtToBuy, $pps, $amtBTCcost, date('m/d/Y h:i:s a', time()))); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
-                $lvars['bidcredit'] --; // update counters
-                $lvars['askcredit'] ++;
-                file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
-
-
-                //JWFIX thse need to be overwritten by teh API calls
-                $btcChange = $lvars['BTC'] - $amtBTCcost;
-                $newShAmt = $amtToBuy * $cvars['makerFee'];
-                $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
-
-                file_put_contents(".btcshares", json_encode($sary));
-
-                $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
-//var_export($sary);
-                return($sary);
-            }
+//            if ($cvars['ar']['mode'] == "l") {
+//                //print $this->g("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
+//                print $this->r(sprintf("[%8s] PLACED BOUGHT ORDER: [%4s] shares: %15s @ %15s =  %15s BTC (%20s)\n", $lvars['pair']['name'], $lvars['k'], $amtToBuy, $pps, $amtBTCcost, date('m/d/Y h:i:s a', time()))); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
+//                $lvars['bidcredit'] --; // update counters
+//                $lvars['askcredit'] ++;
+//                file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
+//
+//
+//                //JWFIX thse need to be overwritten by teh API calls
+//                $btcChange = $lvars['BTC'] - $amtBTCcost;
+//                $newShAmt = $amtToBuy * $cvars['makerFee'];
+//                $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
+//
+//                file_put_contents(".btcshares", json_encode($sary));
+//
+//                $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
+////var_export($sary);
+//                return($sary);
+//            }
         }
-        if ($cvars['ar']['mode'] == "t") { // otehrsise, if test do this
+        //if ($cvars['ar']['mode'] == "t") { // otehrsise, if test do this
             $lvars['bidcredit'] --; // update counters
             $lvars['askcredit'] ++;
             $lvars['buyPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
             $lvars['buyPointsVal'][$lvars['k']] = $lvars['lastData'][$lvars['k']];
             $sary = array('shares' => $newShAmt, 'BTC' => $btcChange);
             return($sary);
-        }
+        //}
     }
 
     // **************************************************************************
@@ -311,23 +311,23 @@ echo "action = ".$cvars['action'];
         $shareBal = 0;
 
         if ($cvars['action'] == "live") {
-            if ($cvars['ar']['mode'] == "l") {
-                print $this->g(sprintf("[%8s] PLACED SOLD   ORDER: [%4s] shares: %15s @ %15s =  %15s BTC (%20s)\n", $lvars['pair']['name'], $lvars['k'], $shares, $pps, $amtToRecover, date('m/d/Y h:i:s a', time()))); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
-                $lvars['askcredit'] --;
-                $lvars['bidcredit'] ++;
-                file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
-                // JWFX need to be overridde,
-                //echo ("320-btcBAL:" . $lvars['BTC'] . " + $amtToRecover * " . $cvars['takerFee'] . "\n");
-
-                $sary = array('shares' => $shareBal, 'BTC' => $btcBal);
-                file_put_contents(".btcshares", json_encode($sary));
-//var_export($sary);
-
-                return($sary);
-            }
+//            if ($cvars['ar']['mode'] == "l") {
+//                print $this->g(sprintf("[%8s] PLACED SOLD   ORDER: [%4s] shares: %15s @ %15s =  %15s BTC (%20s)\n", $lvars['pair']['name'], $lvars['k'], $shares, $pps, $amtToRecover, date('m/d/Y h:i:s a', time()))); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
+//                $lvars['askcredit'] --;
+//                $lvars['bidcredit'] ++;
+//                file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
+//                // JWFX need to be overridde,
+//                //echo ("320-btcBAL:" . $lvars['BTC'] . " + $amtToRecover * " . $cvars['takerFee'] . "\n");
+//
+//                $sary = array('shares' => $shareBal, 'BTC' => $btcBal);
+//                file_put_contents(".btcshares", json_encode($sary));
+////var_export($sary);
+//
+//                return($sary);
+//            }
         }
 
-        if ($cvars['ar']['mode'] == "t") {
+        //if ($cvars['ar']['mode'] == "t") {
 
             $lvars['askcredit'] --;
             $lvars['bidcredit'] ++;
@@ -336,7 +336,7 @@ echo "action = ".$cvars['action'];
 
             $sary = array('shares' => $shareBal, 'BTC' => $btcBal);
             return($sary);
-        }
+        //}
     }
 
     // **************************************************************************
@@ -391,15 +391,15 @@ echo "action = ".$cvars['action'];
         }
         // if live mode we need to remember the last state
 
-        if ($cvars['ar']['mode'] == "l") {
-            $loadCredits = json_decode(file_get_contents(".credits"), TRUE);
-            $lvars['askcredit'] = $loadCredits['askcredit'];
-            $lvars['bidcredit'] = $loadCredits['bidcredit'];
-
-            $loadBtcShares = json_decode(file_get_contents(".btcshares"), TRUE);
-            $lvars['BTC'] = $loadBtcShares['BTC'];
-            $lvars['shares'] = $loadBtcShares['shares'];
-        }
+//        if ($cvars['ar']['mode'] == "l") {
+//            $loadCredits = json_decode(file_get_contents(".credits"), TRUE);
+//            $lvars['askcredit'] = $loadCredits['askcredit'];
+//            $lvars['bidcredit'] = $loadCredits['bidcredit'];
+//
+//            $loadBtcShares = json_decode(file_get_contents(".btcshares"), TRUE);
+//            $lvars['BTC'] = $loadBtcShares['BTC'];
+//            $lvars['shares'] = $loadBtcShares['shares'];
+//        }
 
 
         return($lvars);
@@ -558,7 +558,7 @@ echo "action = ".$cvars['action'];
 
     //*************************************************************************
     public function sumbmitBidRequest(&$lvars, &$cvars) {
-        $bidtx = $this->_newShareVal($lvars, $cvars);
+    $bidtx = $this->_newShareVal($lvars, $cvars);
         if ($bidtx) {
             $lvars['shares'] = $bidtx['shares'];
             $lvars['BTC'] = $bidtx['BTC'];
@@ -629,7 +629,6 @@ echo "action = ".$cvars['action'];
                 $lvars['timesig'] = $this->_getTime($lvars);
                 $lvars['proposedAskPrice'] = $lvars['lastDataAsk'][$lvars['k']];
                 $sellAt = $lvars['proposedAskPrice'];
-
                 if (!$lvars['lastUsedBidPrice']) {
                     $load = json_decode(file_get_contents(".lastUsedBidPrice"), TRUE);
                     $lvars['lastUsedBidPrice'] = $load['lastUsedBidPrice'];
@@ -640,6 +639,7 @@ echo "action = ".$cvars['action'];
                 $this->recspec((( ($thispct - $cvars['ar']['minpctup']) > 0) ? "passed" : "failed"));
 //                $this->recspec($lovars['pctok'] );
 
+//echo "[$thispct  > ".$cvars['ar']['minpctup']."]<<<<<<<<<<<<<<<<<";                
                 if ($thispct > $cvars['ar']['minpctup']) {   // JWFIX  for some ewason, even though thi was true, it sold below the buy 
 //                    if ($boughtAt < $lvars['lastDataAsk'][$lvars['k']]) {  //... so make sure not selling below last bought... use LAST not LOWESTASK
                         $lvars['lastUsedAskPrice'] = $lvars['lastDataAsk'][$lvars['k']]; // uses LOWESTASK
@@ -952,10 +952,10 @@ echo "action = ".$cvars['action'];
         //    $this->logIt("using: macd4.php -f" . $arglist['fastPeriod'] . " -s" . $arglist['slowPeriod'] . " -S" . $arglist['signalPeriod'] . " -p" . $arglist['pair'] . " -m" . $arglist['mode'] . " -c" . $arglist['BTCinv'] . " " . (isset($arglist['debug']) ? " -d" : '') . (isset($arglist['debug']) ? " -h" : '') . "\n", $cvars);
         $str = <<<EOF
                     
-               macd4.php -f[fastPeriod] -s[slowPeriodl] -S[signalPeriod] -p[pairname] -m[mode] -c[BTC investment] -x[xsteps] -a[minupticks] -b[mindnticks] -F[frompoint] -d(ebug) -h(elp)
+               macd4.php -f[fastPeriod] -s[slowPeriodl] -S[signalPeriod] -p[pairname] -c[BTC investment] -x[xsteps] -a[minupticks] -b[mindnticks] -F[frompoint] -d(ebug) -h(elp)
 
                Ex: (using default values)
-                    ./trigger2.php -f26 -s12 -S4 -pBTC_AMP -mt -c1.0 -x7 -a4 -b1 -F1 [-d] [-h] 
+                    ./trigger2.php -f26 -s12 -S4 -pBTC_AMP -c1.0 -x7 -a4 -b1 -F1 [-d] [-h] 
 
                         In 'test' mode modelook for 1 minute changes on BTC_AMP and look for 
                         triggers based on the MACD, and use 1.0 BTC as your purchasing amount 
@@ -979,10 +979,7 @@ echo "action = ".$cvars['action'];
                             f_tophilo       - TOP 10 BASED ON LARGEST HI/LO DELTA
                             f_tophiloXpcXbv - TOP 10 BASED ON LARGEST HI/LO DELTA, BASE VOLUME AND PERCENT INCREASE
                             f_bothilo       - TOP 10 BASED ON SMALLEST HI/LO DELTA, BASE VOLUME AND PERCENT INCREASE
-                   -m | --mode
-                        "t" = test mode
-                        "l" = live mode
-                        "a" = analyze mode (dead for now)
+
 
                    -x | --xsteps
                         How oftenm to sample the data bu mintes.  
@@ -1095,14 +1092,14 @@ EOF;
         $k = $args['k'];
         $rechour = $args['rechour'];
         $conn = $args['conn'];
-        $mode = $args['mode'];
+        //$mode = $args['mode'];
 
         $str = "select * from histrandom";
-        if ($mode == "t") {
+        //if ($mode == "t") {
 
             $to = $rechour * 3 + $k;
             $str = "SELECT * FROM (SELECT * FROM histrandom ORDER BY id DESC LIMIT $k, $to ) sub ORDER BY id ASC";
-        }
+        //}
         $st = $conn->prepare($str);
         $st->execute();
         $data = $st->fetchAll();
@@ -1605,7 +1602,7 @@ EOX;
     }
 
     public function getARopts(&$cvars) {
-        $xr = $this->getoptreq('f:s:S:p:m:c:x:U:D:X:z:a:b:F:d:h', array('fastperiod:', 'slowperiod:', 'signalperiod:', 'pairq:', 'mode:', 'btcinv:', 'xsteps:', 'minpctup:', 'maxpctdn:', 'method:', 'data:', 'minupticks:', 'mindnticks:', 'frompoint' . 'debug:', 'help'));
+        $xr = $this->getoptreq('f:s:S:p:c:x:U:D:X:z:a:b:F:d:h', array('fastperiod:', 'slowperiod:', 'signalperiod:', 'pairq:', 'btcinv:', 'xsteps:', 'minpctup:', 'maxpctdn:', 'method:', 'data:', 'minupticks:', 'mindnticks:', 'frompoint' . 'debug:', 'help'));
 
         $cvars['ar']['debug'] = 0;
         foreach (array_keys($xr) as $opt)
@@ -1624,10 +1621,6 @@ EOX;
 
                 case 'p':
                     $cvars['ar']['pairq'] = $xr['p'];
-                    break;
-
-                case 'm':
-                    $cvars['ar']['mode'] = $xr['m'];
                     break;
 
                 case 'c':
@@ -1699,7 +1692,6 @@ EOX;
         $cvars['ar']['slowPeriod'] = (isset($cvars['ar']['slowPeriod']) ? $cvars['ar']['slowPeriod'] : 14);
         $cvars['ar']['signalPeriod'] = (isset($cvars['ar']['signalPeriod']) ? $cvars['ar']['signalPeriod'] : 9);
         $cvars['ar']['pairq'] = (isset($cvars['ar']['pairq']) ? $cvars['ar']['pairq'] : "BTC_AMP");
-        $cvars['ar']['mode'] = (isset($cvars['ar']['mode']) ? $cvars['ar']['mode'] : "t");
         $cvars['ar']['BTCinv'] = (isset($cvars['ar']['BTCinv']) ? $cvars['ar']['BTCinv'] : 1);
         $cvars['ar']['xsteps'] = (isset($cvars['ar']['xsteps']) ? $cvars['ar']['xsteps'] : 7);
         $cvars['ar']['minpctup'] = (isset($cvars['ar']['minpctup']) ? $cvars['ar']['minpctup'] : 0.0125);

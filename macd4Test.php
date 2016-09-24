@@ -41,8 +41,8 @@ $api_secret = "c31279732b0a375c6645e05a8f7233f3c883198a8195e8f002418258a50152fd4
 
 $p = new \poloniex($api_key, $api_secret);
 
-require("Macd4Class.php");
-$m4 = new \Macd4Class();
+require("Macd4ClassTest.php");
+$m4 = new \Macd4ClassTest();
 
 $lvars = array(
     'pair' => array()
@@ -94,7 +94,7 @@ $cvars = array(
     , 'action' => 'test'
     , 'makerFee' => 0.9985 // 0.15% fee of bid orders
     , 'takerFee' => 0.9985 // e use the make free for all  and not the actual 0.25 fee on ask
-    , 'samples' => 4310 // technically only need $fastPeriod numbner of records to make a decision, but we need more to see the hostory... 4320 = 3 days of data
+    , 'samples' => 431000 // technically only need $fastPeriod numbner of records to make a decision, but we need more to see the hostory... 4320 = 3 days of data
     , 'ar' => array()
 );
 $totcashout = 0;
@@ -111,7 +111,6 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
     $cvars['ar']['fastPeriod'] = (isset($_GET['fastPeriod']) ? $_GET['fastPeriod'] : $cvars['ar']['fastPeriod']);
     $cvars['ar']['slowPeriod'] = (isset($_GET['slowPeriod']) ? $_GET['slowPeriod'] : $cvars['ar']['slowPeriod']);
     $cvars['ar']['signalPeriod'] = (isset($_GET['signalPeriod']) ? $_GET['signalPeriod'] : $cvars['ar']['signalPeriod']);
-    $cvars['ar']['mode'] = (isset($_GET['mode']) ? $_GET['mode'] : $cvars['ar']['mode']);
     $cvars['ar']['BTCinv'] = (isset($_GET['BTCinv']) ? $_GET['BTCinv'] : $cvars['ar']['BTCinv']);
     $cvars['ar']['xsteps'] = (isset($_GET['xsteps']) ? $_GET['xsteps'] : $cvars['ar']['xsteps']);
     $cvars['ar']['minpctup'] = (isset($_GET['minpctup']) ? $_GET['minpctup'] / 100 : $cvars['ar']['minpctup']);
@@ -260,7 +259,7 @@ foreach ($allpairs as $lvars['pair']) {
     $lvars['volume'] = $m4->chopary($lvars['volume'], $arraydiff);
     $lvars['data'] = $m4->chopary($tdata, $arraydiff);
     $cvars['logfile'] = $m4->getLogfile($cvars['ar']['pairq']);
-    $running = "RUNNING -> ./macd4.php -f" . $cvars['ar']['fastPeriod'] . " -s" . $cvars['ar']['slowPeriod'] . " -S" . $cvars['ar']['signalPeriod'] . " -p" . ($lvars['pair']['name']) . " -m" . $cvars['ar']['mode'] . " -c" . $cvars['ar']['BTCinv'] . " -x" . $cvars['ar']['xsteps'] . " -U" . $cvars['ar']['minpctup'] * 100 . " -D" . $cvars['ar']['maxpctdn'] * 100 . " -z" . $cvars['ar']['dataset'] . "-a" . $cvars['ar']['upticks'] . " -b" . $cvars['ar']['dnticks'] . " \n";
+    $running = "RUNNING -> ./macd4Test.php -f" . $cvars['ar']['fastPeriod'] . " -s" . $cvars['ar']['slowPeriod'] . " -S" . $cvars['ar']['signalPeriod'] . " -p" . ($lvars['pair']['name']) . " -c" . $cvars['ar']['BTCinv'] . " -x" . $cvars['ar']['xsteps'] . " -U" . $cvars['ar']['minpctup'] * 100 . " -D" . $cvars['ar']['maxpctdn'] * 100 . " -z" . $cvars['ar']['dataset'] . "-a" . $cvars['ar']['upticks'] . " -b" . $cvars['ar']['dnticks'] . " \n";
     $m4->logIt($running, $cvars);
     if (PHP_SAPI != 'cli') {
         print $running;
@@ -341,49 +340,47 @@ foreach ($allpairs as $lvars['pair']) {
 //    echo $lvars['BTC'].":";
 //    echo $lvars['shares'];
     $date = date('m/d/Y h:i:s a', time());
-    if ($cvars['ar']['mode'] == "l") {  // all this stuff is only valid when in test mode
-        $rs = sprintf("> [%6s] %12s %6d %32.16f  %32.16f %s  \n", $cvars['lastid'], $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $lvars['BTC'], $lvars['shares'], $date);
-//        print($rs);
-        $m4->logIt($rs, $cvars, 1);
-    }
-
+//    if ($cvars['ar']['mode'] == "l") {  // all this stuff is only valid when in test mode
+//        $rs = sprintf("> [%6s] %12s %6d %32.16f  %32.16f %s  \n", $cvars['lastid'], $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $lvars['BTC'], $lvars['shares'], $date);
+////        print($rs);
+//        $m4->logIt($rs, $cvars, 1);
+//    }
 //shares    print "---".$cashout."\n";
+    //if ($cvars['ar']['mode'] == "t") {  // all this stuff is only valid when in test mode
+    if ($lvars['bidcredit'] == 0) {
 
-    if ($cvars['ar']['mode'] == "t") {  // all this stuff is only valid when in test mode
-        if ($lvars['bidcredit'] == 0) {
-
-            $lvars['bidcredit'] ++;
-            $lvars['askcredit'] --;
-            $m4->logIt("CASHING OUT AT LAST BUY PRICE: ", $cvars);
+        $lvars['bidcredit'] ++;
+        $lvars['askcredit'] --;
+        $m4->logIt("CASHING OUT AT LAST BUY PRICE: ", $cvars);
 //            print $m4->g("CASHING OUT\n");
-            $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
-            // use the cumm totals for testing, and the last price for live
-            if ($shval != 0) {
-                $cashout = $lvars['BTC'] + $shval;
-            }
-
-
-
-            $lvars['sharesHolding'] = $lvars['shares'];
+        $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
+        // use the cumm totals for testing, and the last price for live
+        if ($shval != 0) {
+            $cashout = $lvars['BTC'] + $shval;
         }
-        $annualUnits = $m4->getDaysDiff($lvars['times'][0], $lvars['times'][count($lvars['times']) - 1]);
-        $annualPct = ($cashout - $cvars['ar']['BTCinv']) * 100 * $annualUnits;
-        $date = date('m/d/Y h:i:s a', time());
-        //print "action = [".$lvars['action']."]\n";
-        $rs = sprintf("> %12s %6d %32.16f %5s bids %5s asks %5.2f%% (annual) %s  \n", $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $cashout, $lvars['bids'], $lvars['asks'], sprintf("%8.2f", $annualPct), $date);
-        print($rs);
-        if (PHP_SAPI != 'cli') {
-            print "<h2>";
-            print "<div style='background-color:grey;'>\n";
-            $m4->makeGraphs1($lvars, $cvars, $macdary);
-            $m4->makeGraphs2($lvars, $cvars, $macdary);
-            print "</h2>";
-            print "</div>\n";
-        }
-        $totcashout += $cashout;
-        $totc = count($allpairs);
-        $lvars['BTC'] = $cvars['ar']['BTCinv'];
+
+
+
+        $lvars['sharesHolding'] = $lvars['shares'];
     }
+    $annualUnits = $m4->getDaysDiff($lvars['times'][0], $lvars['times'][count($lvars['times']) - 1]);
+    $annualPct = ($cashout - $cvars['ar']['BTCinv']) * 100 * $annualUnits;
+    $date = date('m/d/Y h:i:s a', time());
+    //print "action = [".$lvars['action']."]\n";
+    $rs = sprintf("> %12s %6d %32.16f %5s bids %5s asks %5.2f%% (annual) %s  \n", $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $cashout, $lvars['bids'], $lvars['asks'], sprintf("%8.2f", $annualPct), $date);
+    print($rs);
+    if (PHP_SAPI != 'cli') {
+        print "<h2>";
+        print "<div style='background-color:grey;'>\n";
+        $m4->makeGraphs1($lvars, $cvars, $macdary);
+        $m4->makeGraphs2($lvars, $cvars, $macdary);
+        print "</h2>";
+        print "</div>\n";
+    }
+    $totcashout += $cashout;
+    $totc = count($allpairs);
+    $lvars['BTC'] = $cvars['ar']['BTCinv'];
+    //}
 }
 
 //******************************************************************************

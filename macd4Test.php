@@ -23,8 +23,8 @@ $api_secret = "c31279732b0a375c6645e05a8f7233f3c883198a8195e8f002418258a50152fd4
 
 $p = new \poloniex($api_key, $api_secret);
 
-require("Macd4Class.php");
-$m4 = new \Macd4Class();
+require("Macd4ClassTest.php");
+$m4 = new \Macd4ClassTest();
 
 $lvars = array(
     'pair' => array()
@@ -87,7 +87,6 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
     $cvars['ar']['fastPeriod'] = (isset($_GET['fastPeriod']) ? $_GET['fastPeriod'] : $cvars['ar']['fastPeriod']);
     $cvars['ar']['slowPeriod'] = (isset($_GET['slowPeriod']) ? $_GET['slowPeriod'] : $cvars['ar']['slowPeriod']);
     $cvars['ar']['signalPeriod'] = (isset($_GET['signalPeriod']) ? $_GET['signalPeriod'] : $cvars['ar']['signalPeriod']);
-    $cvars['ar']['mode'] = (isset($_GET['mode']) ? $_GET['mode'] : $cvars['ar']['mode']);
     $cvars['ar']['BTCinv'] = (isset($_GET['BTCinv']) ? $_GET['BTCinv'] : $cvars['ar']['BTCinv']);
     $cvars['ar']['xsteps'] = (isset($_GET['xsteps']) ? $_GET['xsteps'] : $cvars['ar']['xsteps']);
     $cvars['ar']['minpctup'] = (isset($_GET['minpctup']) ? $_GET['minpctup'] / 100 : $cvars['ar']['minpctup']);
@@ -437,8 +436,8 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
 
 
 
-//    $m4->logIt("[2]************************ [(${lvars['BTC']} BTC) ${ar['leadingTicks']} ${ar['pair']} ${ar['mode']} ${ar['upthresh']} ${ar['dnthresh']}] **********************\n", $cvars);
-        $m4->logIt("RUNNING -> ./macd4.php -f" . $cvars['ar']['fastPeriod'] . " -s" . $cvars['ar']['slowPeriod'] . " -S" . $cvars['ar']['signalPeriod'] . " -p" . ($lvars['pair']['name']) . " -m" . $cvars['ar']['mode'] . " -c" . $cvars['ar']['BTCinv'] . " -x" . $cvars['ar']['xsteps'] . " -U" . $cvars['ar']['minpctup'] * 100 . " -D" . $cvars['ar']['maxpctdn'] * 100 . " -z" . $cvars['ar']['dataset'] . "\n", $cvars);
+//    $m4->logIt("[2]************************ [(${lvars['BTC']} BTC) ${ar['leadingTicks']} ${ar['pair']} ${ar['upthresh']} ${ar['dnthresh']}] **********************\n", $cvars);
+        $m4->logIt("RUNNING -> ./macd4.php -f" . $cvars['ar']['fastPeriod'] . " -s" . $cvars['ar']['slowPeriod'] . " -S" . $cvars['ar']['signalPeriod'] . " -p" . ($lvars['pair']['name']) ." -c" . $cvars['ar']['BTCinv'] . " -x" . $cvars['ar']['xsteps'] . " -U" . $cvars['ar']['minpctup'] * 100 . " -D" . $cvars['ar']['maxpctdn'] * 100 . " -z" . $cvars['ar']['dataset'] . "\n", $cvars);
         $btc_value = $m4->getCurrentBTCval();
         for ($lvars['k'] = 1; $lvars['k'] < count($lvars['macd']); $lvars['k'] ++) {
             $lvars['buyPoints'][$lvars['k']] = 0;

@@ -1,0 +1,10 @@
+#!/bin/bash
+shopt -s dotglob
+
+cd /home/jw/src/macd4
+chown -R 33:1000 *
+chmod -R a+rw *
+find -type d -exec chmod a+x  {} \;
+cd -
+
+

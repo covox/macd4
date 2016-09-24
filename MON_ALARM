@@ -1,8 +1,7 @@
 #!/usr/sbin/bash
 inotifywait -q -m /home/jw/src/macd4/trans -e modify |
     while read path action file;     do
-#         echo `cat /home/jw/src/macd4/trans/_lastID` : `date`
-        ./TRUN
+        ./alarms.php
     done
 	
 	

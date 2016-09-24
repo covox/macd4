@@ -262,7 +262,7 @@ class Macd4Class {
         if ($cvars['action'] == "live") { // if live (i.e. last recod) do this 
             if ($cvars['ar']['mode'] == "l") {
                 //print $this->g("BUY (b" . $lvars['bidcredit'] . "/a" . $lvars['askcredit'] . ")\n");
-                print $this->r(sprintf("PLACED BOUGHT ORDER: [%4s] shares: %15s @ %15s =  %15s BTC\n", $lvars['k'], $amtToBuy, $pps, $amtBTCcost)); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
+                print $this->r(sprintf("[%8s] PLACED BOUGHT ORDER: [%4s] shares: %15s @ %15s =  %15s BTC (%20s)\n", $lvars['pair']['name'], $lvars['k'], $amtToBuy, $pps, $amtBTCcost, date('m/d/Y h:i:s a', time()))); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
                 $lvars['bidcredit'] --; // update counters
                 $lvars['askcredit'] ++;
                 file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
@@ -281,8 +281,6 @@ class Macd4Class {
             }
         }
         if ($cvars['ar']['mode'] == "t") { // otehrsise, if test do this
-            $lvars['bidcredit'] --; // update counters
-            $lvars['askcredit'] ++;
             $lvars['bidcredit'] --; // update counters
             $lvars['askcredit'] ++;
             $lvars['buyPoints'][$lvars['k']] = $lvars['macd'][$lvars['k']];
@@ -307,12 +305,12 @@ class Macd4Class {
         $this->recspec("SOLD");
 
         $amtToRecover = ($shares * $pps);
-                $btcBal = $lvars['BTC'] + ($amtToRecover * $cvars['takerFee']);
-                $shareBal = 0;
+        $btcBal = $lvars['BTC'] + ($amtToRecover * $cvars['takerFee']);
+        $shareBal = 0;
 
         if ($cvars['action'] == "live") {
             if ($cvars['ar']['mode'] == "l") {
-                print $this->g(sprintf("PLACED SOLD   ORDER: [%4s] shares: %15s @ %15s =  %15s BTC\n", $lvars['k'], $shares, $pps, $amtToRecover)); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
+                print $this->g(sprintf("[%8s] PLACED SOLD   ORDER: [%4s] shares: %15s @ %15s =  %15s BTC (%20s)\n", $lvars['pair']['name'], $lvars['k'], $shares, $pps, $amtToRecover, date('m/d/Y h:i:s a', time()))); // tyhis is where we make the call to poloniex IF we are live and if thsi is the last transaction
                 $lvars['askcredit'] --;
                 $lvars['bidcredit'] ++;
                 file_put_contents(".credits", json_encode(array('bidcredit' => $lvars['bidcredit'], 'askcredit' => $lvars['askcredit'])));
@@ -371,6 +369,24 @@ class Macd4Class {
         $lvars['k'] = 0;
         $lvars['dir'] = "";
 
+
+
+        // store
+        if (file_exists("macd4.ini")) {
+            $iniary = parse_ini_file("macd4.ini");
+                        
+            
+            $cvars['ar']['upticks'] = $iniary['upticks'];
+            $cvars['ar']['dnticks'] = $iniary['dnticks'];
+            
+            $cvars['ar']['fastPeriod'] = $iniary['fastPeriod'];
+            $cvars['ar']['slowPeriod'] = $iniary['slowPeriod'];
+            $cvars['ar']['signalPeriod'] = $iniary['signalPeriod'];
+            
+            
+            $cvars['ar']['minpctup'] = $iniary['minpctup'];
+            $cvars['ar']['maxpctdn'] = $iniary['minpctdn'];
+        }
         // if live mode we need to remember the last state
 
         if ($cvars['ar']['mode'] == "l") {
@@ -619,18 +635,20 @@ class Macd4Class {
                 $this->recspec((( ($thispct - $cvars['ar']['minpctup']) > 0) ? "passed" : "failed"));
 //                $this->recspec($lovars['pctok'] );
 
-                if ($thispct > $cvars['ar']['minpctup']) {
-                    $lvars['lastUsedAskPrice'] = $lvars['lastDataAsk'][$lvars['k']]; // uses LOWESTASK
-                    $r = $this->_getStatStr($lvars);
-                    $rs = $this->sumbmitAskRequest($lvars, $cvars);
-                    if (!$rs) {
+                if ($thispct > $cvars['ar']['minpctup']) {   // JWFIX  for some ewason, even though thi was true, it sold below the buy 
+                    if ($boughtAt < $lvars['lastDataAsk'][$lvars['k']]) {  //... so make sure not selling below last bought... use LAST not LOWESTASK
+                        $lvars['lastUsedAskPrice'] = $lvars['lastDataAsk'][$lvars['k']]; // uses LOWESTASK
+                        $r = $this->_getStatStr($lvars);
+                        $rs = $this->sumbmitAskRequest($lvars, $cvars);
+                        if (!$rs) {
 //                        print("ERROR IN ASK SUBMISSION");
 //                        exit;
-                    }
-                    $this->logIt($r, $cvars);
+                        }
+                        $this->logIt($r, $cvars);
 //                    $lvars['shares'] = 0;
-                    $lvars['asks'] ++;
-                    $lvars['action'] = ".";
+                        $lvars['asks'] ++;
+                        $lvars['action'] = ".";
+                    }
                 }
             }
         }
@@ -1682,7 +1700,7 @@ EOX;
 //***************************************************************************************************
     public function makeGraphs1(&$lvars, &$cvars, &$macdary) {
 
-        system("rm /home/jw/src/macd4/img/*");
+        system("rm img/*");
 
         if (PHP_SAPI === 'cli' || empty($_SERVER['REMOTE_ADDR'])) {
 //        if (1 == 0) {

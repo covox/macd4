@@ -102,9 +102,12 @@ $ar = $m4->getARopts($cvars);
 
 $lvars['BTC'] = $cvars['ar']['BTCinv'];
 $dataset = $cvars['ar']['dataset'];
+    // store
+//    file_put_contents(".updnticks",json_encode(array('upticks' => $cvars['ar']['upticks'], 'dnticks' => $cvars['ar']['dnticks'])));
 
 if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
     $cvars['conn'] = $m4->get_dbconn($dataset); // or "remote"
+    
 } else {
     $cvars['ar']['fastPeriod'] = (isset($_GET['fastPeriod']) ? $_GET['fastPeriod'] : $cvars['ar']['fastPeriod']);
     $cvars['ar']['slowPeriod'] = (isset($_GET['slowPeriod']) ? $_GET['slowPeriod'] : $cvars['ar']['slowPeriod']);
@@ -121,7 +124,6 @@ if ((PHP_SAPI === 'cli') || empty($_SERVER['REMOTE_ADDR'])) {
     $cvars['ar']['upticks'] = (isset($_GET['upticks']) ? $_GET['upticks'] : 4);
     $cvars['ar']['dnticks'] = (isset($_GET['dnticks']) ? $_GET['dnticks'] : 1);
     $cvars['ar']['frompoint'] = (isset($_GET['frompoint']) ? $_GET['frompoint'] : 1);
-
 
 
     // these are only web options
@@ -341,7 +343,7 @@ foreach ($allpairs as $lvars['pair']) {
 //    echo $lvars['shares'];
     $date = date('m/d/Y h:i:s a', time());
     if ($cvars['ar']['mode'] == "l") {  // all this stuff is only valid when in test mode
-        $rs = sprintf("> [%6s] %12s %6d %32.16f  %32.16f %s  \n",$cvars['lastid'], $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $lvars['BTC'], $lvars['shares'], $date);
+        $rs = sprintf("> [%6s] %12s %6d %32.16f  %32.16f %s  \n", $cvars['lastid'], $lvars['pair']['name'], $lvars['volume'][$lvars['k'] - 1], $lvars['BTC'], $lvars['shares'], $date);
 //        print($rs);
         $m4->logIt($rs, $cvars, 1);
     }
@@ -357,10 +359,14 @@ foreach ($allpairs as $lvars['pair']) {
             print $m4->g("CASHING OUT\n");
             $shval = $lvars['shares'] * $lvars['lastUsedBidPrice'];
             // use the cumm totals for testing, and the last price for live
-
+            if ($shval != 0) {
+                $cashout = $lvars['BTC'] + $shval;
+            }
+            
+            
+            
             $lvars['sharesHolding'] = $lvars['shares'];
         }
-
         $annualUnits = $m4->getDaysDiff($lvars['times'][0], $lvars['times'][count($lvars['times']) - 1]);
         $annualPct = ($cashout - $cvars['ar']['BTCinv']) * 100 * $annualUnits;
         $date = date('m/d/Y h:i:s a', time());
